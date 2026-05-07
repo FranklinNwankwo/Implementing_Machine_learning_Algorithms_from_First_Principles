@@ -180,4 +180,4 @@ Document assumptions as I go: Several bugs were rooted in me forgetting an assum
 ## Author
 
 **Franklin Nwankwo**  
-[GitHub](https://github.com/FranklinNwankwo)
+[LinkedIn](https://www.linkedin.com/in/franklin-nwankwo-499736383/)
