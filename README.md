@@ -6,6 +6,8 @@ Each project follows the full ML pipeline: exploratory data analysis, feature en
 
 ---
 
+ ## SUPERVISED LEARNING
+
 | # | Project | Algorithm | Dataset | Status |
 |---|---|---|---|---|
 | 01 | [Linear Regression](./1.%20Supervised_Learning/1.%20linear-regression_california_housing/) | OLS / Gradient Descent | California Housing | Complete |
