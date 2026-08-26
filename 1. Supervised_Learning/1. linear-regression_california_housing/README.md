@@ -81,19 +81,19 @@ See `requirements.txt`. Core libraries used:
 | `pandas` | Data manipulation and EDA |
 | `matplotlib` | Visualizations |
 | `seaborn` | Statistical plots |
-| `scikit-learn` | For cross- validation baseline |
-| `statsmodels` | VIF / multicollinearity diagnostics |
-| `jupyter` | Notebook environment |
+| `scikit-learn` | For benchmark baseline ||
 
 ---
 
 ## Limitations
 
+- **Target censoring at $500,001**: `median_house_value` is capped — any true value above $500,000 was recorded as $500,001. This creates an artificial ceiling that biases the regression upward in the high-value range and prevents the model from learning true prices above the cap.
+- **`housing_median_age` censoring**: values are capped at 52 years, with all older neighborhoods grouped into a single bin. This produces the same right-censoring effect as the target variable and limits the model's ability to distinguish ages beyond that threshold.
+- **Data leakage in imputation**: missing `total_bedrooms` values were imputed with the column median computed on the full dataset *before* the train/test split, so the training statistics were influenced by test-set values. A stricter pipeline would fit the imputation median on the training set only and apply it to the test set.
 - Linear regression assumes a linear relationship between features and the target; the California Housing data has notable non-linearities.
 - Outliers in `AveRooms` and `AveOccup` affect coefficient estimates.
 - Geographic features (`Latitude`, `Longitude`) are used as raw inputs rather than being modelled spatially.
 - No regularisation (Ridge/Lasso) is applied; the model may overfit on noisy features.
-
 ---
 
 ## Results
@@ -121,6 +121,7 @@ The Normal Equation works well for smaller datasets, but it requires computing a
 3. Gradient Descent From Scratch.
 
 Implementing gradient descent by hand was where things got really interesting. The update rule is simple enough on paper; subtract the gradient of the loss function scaled by a learning rate, but making it work reliably in practice involves several decisions: how to initialize weights, what learning rate to use, when to stop.
+
 Getting it wrong in any of these areas produces models that diverge, oscillate, or just converge to the wrong place. I had to develop an intuition for what "healthy" training looks like (smooth, decreasing loss) versus what pathological training looks like. That intuition doesn't come from reading, but from from watching it break, and then improve iteratively.
 
 4. Early Stopping
@@ -133,7 +134,7 @@ Early stopping also introduced the concept of "patience", waiting a certain numb
 
 I added engineered features to try to improve model performance, including interaction terms and ratio features derived from the raw columns in the California Housing dataset. This immediately produced a wave of problems I didn't anticipate.
 
-The Dummy Variable Trap. When encoding categorical variables with one-hot encoding, including all categories creates perfect multicollinearity; one column can be exactly predicted as a linear combination of the others. This makes the design matrix rank-deficient, and the Normal Equation breaks down because you can't invert a singular matrix. The fix is simple: drop one category, but you have to know to do it.
+The Dummy Variable Trap. When encoding categorical variables with one-hot encoding, including all categories creates perfect multicollinearity; one column can be exactly predicted as a linear combination of the others. This makes the design matrix rank-deficient, and the Normal Equation breaks down because you can't invert a singular matrix. The fix is simple: drop one category.
 
 Rank Deficiency. Even beyond the dummy variable trap, adding too many engineered features (especially ones derived from each other) can reduce the rank of the feature matrix. I hit this, diagnosed it using np.linalg.matrix_rank, and had to carefully audit which features were redundant and remove them.
 
@@ -179,5 +180,5 @@ Document assumptions as I go: Several bugs were rooted in me forgetting an assum
 
 ## Author
 
-**Franklin Nwankwo**  
+**Chinonso Franklin Nwankwo**  
 [LinkedIn](https://www.linkedin.com/in/franklin-nwankwo-499736383/)
