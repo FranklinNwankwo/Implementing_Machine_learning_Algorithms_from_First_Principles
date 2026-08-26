@@ -31,14 +31,15 @@ Key issues encountered and resolved during the project:
 ## Repository Structure
 
 ```
-credit-card-fraud-logistic-regression/
-├── data/                  # Dataset files (not committed)
-├── notebooks/             # Jupyter notebooks
-│   └── Logistic_Regression_from_scratch.ipynb
-├── .gitignore
-├── requirements.txt
-└── README.md
+2. logistic_regression_credit_card_fraud/
+├── data/
+│ └── .gitkeep
+├── notebook/
+│ └── Logistic_Regression_from_scratch.ipynb
+├── README.md
+└── requirements.txt
 ```
+
 
 > **Note on data:** The raw dataset is not committed to this repo. It is loaded directly via this url: https://raw.githubusercontent.com/nsethi31/Kaggle-Data-Credit-Card-Fraud-Detection/master/creditcard.csv inside the notebook, so no manual download is needed.
 
@@ -49,8 +50,8 @@ credit-card-fraud-logistic-regression/
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/credit-card-fraud-logistic-regression.git
-cd credit-card-fraud-logistic-regression
+git clone https://github.com/FranklinNwankwo/Implementing_Machine_learning_Algorithms_from_First_Principles.git
+cd "Implementing_Machine_learning_Algorithms_from_First_Principles/1. Supervised_Learning/2. logistic_regression_credit_card_fraud"
 ```
 
 ### 2. Create and activate a virtual environment (recommended)
@@ -69,7 +70,7 @@ pip install -r requirements.txt
 ### 4. Launch the notebook
 
 ```bash
-jupyter notebook notebooks/
+jupyter notebook notebook/
 ```
 
 ---

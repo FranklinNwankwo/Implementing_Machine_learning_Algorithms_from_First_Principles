@@ -28,13 +28,13 @@ Key issues encountered and resolved during the project:
 ## Repository Structure
 
 ```
-california-housing-regression/
-├── data/                  # Dataset files
-├── notebooks/             # Jupyter notebooks
-│   └── linear_regression.ipynb
-├── .gitignore
-├── requirements.txt
-└── README.md
+1. linear-regression_california_housing/
+├── data/
+│   └──.gitkeep                  
+├── notebook/             
+│   └── Linear_Regression-Using California_House_Dataset.ipynb
+├── README.md
+└── requirements.txt
 ```
 
 > **Note on data:** The raw dataset is not committed to this repo. It is loaded directly via this url: https://raw.githubusercontent.com/ageron/handson-ml/master/datasets/housing/housing.csv inside the notebook, so no manual download is needed.
@@ -46,8 +46,8 @@ california-housing-regression/
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/california-housing-regression.git
-cd california-housing-regression
+git clone https://github.com/FranklinNwankwo/Implementing_Machine_learning_Algorithms_from_First_Principles.git
+cd "Implementing_Machine_learning_Algorithms_from_First_Principles/1. Supervised_Learning/1. linear-regression_california_housing"
 ```
 
 ### 2. Create and activate a virtual environment (recommended)
