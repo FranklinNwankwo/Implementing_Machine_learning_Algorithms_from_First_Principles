@@ -1,16 +1,15 @@
 # Implementing Machine Learning Algorithms from First Principles
 
-A collection of machine learning projects built from scratch using core scientific Python libraries (primarily NumPy). The goal is to develop a deep understanding of how these algorithms work under the hood, without relying on high-level abstractions like scikit-learn for the implementations themselves.
+A collection of Machine Learning projects built from scratch using core scientific Python libraries (primarily NumPy). The goal is to develop a deep understanding of how these algorithms work under the hood, without relying on high-level abstractions like scikit-learn for the implementations themselves.
 
 Each project follows the full ML pipeline: exploratory data analysis, feature engineering, from-scratch implementation, and validation against a reference library.
 
 ---
 
-## Projects
-
 | # | Project | Algorithm | Dataset | Status |
 |---|---|---|---|---|
-| 01 | [Linear Regression](./linear_regression_california_housing/) | OLS / Gradient Descent | California Housing | ✅ Complete |
+| 01 | [Linear Regression](./1.%20Supervised_Learning/1.%20linear-regression_california_housing/) | OLS / Gradient Descent | California Housing | ✅ Complete |
+| 02 | [Logistic Regression](./1.%20Supervised_Learning/2.%20logistic_regression_credit_card_fraud/) | Gradient Descent (Weighted BCE / SMOTE) | Credit Card Fraud Detection | ✅ Complete |
 
 ---
 
@@ -21,7 +20,7 @@ Each project lives in its own subdirectory and contains:
 ```
 project_name/
 ├── data/            # Data files (usually not tracked; loaded programmatically)
-├── notebooks/       # Jupyter notebooks
+├── notebook/        # Jupyter notebook
 ├── requirements.txt # Project-specific dependencies
 └── README.md        # Project overview, results, and limitations
 ```
