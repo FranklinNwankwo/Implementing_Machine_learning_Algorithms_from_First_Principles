@@ -1,46 +1,52 @@
-# Decision Tree from Scratch — Breast Cancer Wisconsin Classification
+# Random Forest from Scratch — Titanic Survival Prediction
 
-An end-to-end machine learning project implementing a CART-style Decision Tree classifier using only NumPy, applied to the [Breast Cancer Wisconsin Diagnostic dataset](https://scikit-learn.org/stable/datasets/toy_dataset.html#breast-cancer-wisconsin-diagnostic-dataset).
+An end-to-end machine learning project implementing a Random Forest classifier using only NumPy and Pandas, applied to the [Titanic survival dataset](https://www.kaggle.com/c/titanic).
 
-Built to understand the fundamentals of Gini-impurity-based recursive splitting without relying on high-level abstractions.
+Built to understand the fundamentals of ensemble learning — bagging, random feature subsampling, and Out-of-Bag estimation — without relying on high-level abstractions.
 
 ---
 
 ## Project Overview
 
-This is a binary classification problem — **Malignant** (positive class, cancer present) vs. **Benign** (negative class). Because a missed cancer diagnosis carries extremely high clinical risk, **Recall on the Malignant class is the primary optimisation target throughout, not overall accuracy.**
+A single Decision Tree trained to low bias tends to overfit: small perturbations in the training data produce substantially different trees — a **high-variance** model. Random Forest addresses this through three mechanisms, all implemented from scratch here:
+
+1. **Bootstrap Aggregation (Bagging)** — each tree trains on a bootstrap sample drawn with replacement, giving trees overlapping but non-identical data
+2. **Random Feature Subsampling** — only a random subset of features is considered at each split, decorrelating individual trees
+3. **Majority / Probability Voting** — final predictions aggregate all trees' outputs, smoothing out individual errors
 
 This project walks through the full supervised learning pipeline:
 
-- **Exploratory Data Analysis (EDA)** — class distribution, correlation heatmap, feature distributions by class, outlier inspection, pairplots on the most separable features
-- **Mathematical Foundations** — Gini impurity, weighted Gini for a split, information gain, and a worked numerical example, plus a Gini-vs-Entropy comparison
-- **Model Implementation** — a full CART-style tree (`Node` class, recursive Gini-impurity splitting, threshold-midpoint search, `predict_proba`, and Gini-reduction-based feature importances) built from scratch with NumPy
-- **Hyperparameter Sensitivity Analysis** — `max_depth`, `min_samples_split`, and `min_samples_leaf` sweeps, plus 5-fold stratified cross-validation for stability
-- **Comparison Models** — benchmarked against `sklearn`'s `DecisionTreeClassifier`, Random Forest, XGBoost, Logistic Regression, and SVM (RBF)
-- **Final Evaluation** — ROC and Precision-Recall curves, confusion matrices, cost-complexity (post-)pruning, and decision-threshold optimisation for recall
+- **Exploratory Data Analysis (EDA)** — target distribution, survival by categorical features, Sex×Pclass interaction, numerical feature distributions, correlation analysis
+- **Feature Engineering** — title extraction from `Name` via regex, family-size features, cabin-missingness and deck features, ticket-group size and fare-per-person, domain-informed age/fare binning
+- **Preprocessing** — stratified three-way split, training-set-only imputation, log1p(Fare) transform, and a manual one-hot encoder class (no `sklearn.preprocessing`, no `pd.get_dummies`)
+- **Model Implementation** — a `DecisionTreeClassifier` (Gini impurity, random feature subsampling) and a `RandomForestClassifier` (bagging, majority/probability voting, OOB scoring) both built from scratch with NumPy
+- **Hyperparameter Sensitivity Analysis** — `n_estimators`, `max_depth`, `max_features`, and `min_samples_leaf` sweeps, each checked against theoretical bias-variance predictions
+- **Validation** — 5-fold stratified cross-validation, decision-threshold optimisation (F1-optimal τ*), and a custom-vs-sklearn parity check
+- **Comparative Modeling** — benchmarked against sklearn's Random Forest, Gradient Boosting, AdaBoost, SVM (RBF), and KNN
+- **Diagnostics** — feature importance (Mean Decrease in Gini), an ablation study on each feature-engineering step, learning curves, and subgroup error analysis (by Sex, Pclass, Title, FamilyGroup)
 
 Key issues encountered and resolved during the project:
 
-- sklearn's `load_breast_cancer` encodes labels as `0 = Malignant, 1 = Benign` — flipped to the clinical convention (`1 = Malignant`) so Recall/Precision/F1 are computed with Malignant as the positive class
-- Choosing Recall over accuracy as the primary metric, since a naive "always Benign" classifier already scores ~62% accuracy
-- Validating that the scratch tree's minor performance gap versus sklearn comes from threshold-enumeration and tie-breaking differences, not implementation bugs
-- Balancing interpretability against ensemble performance for a clinical-deployment recommendation
+- High-cardinality categorical encoding (`Cabin`, `Ticket`) risking sparse, low-frequency split candidates — resolved by encoding missingness and extracting compact derived features (deck letter, group size) instead of raw values
+- Data leakage risk from imputation and one-hot vocabulary being fit anywhere other than the training set
+- Distinguishing genuine ensemble gains from variance an individual tree would show under a different random seed — addressed with an explicit single-tree-vs-forest variance experiment
+- Known Mean-Decrease-in-Gini bias toward high-cardinality features, flagged explicitly when interpreting feature importances
 
 ---
 
 ## Repository Structure
 
 ```
-3. decision_tree_breast_cancer/
+4. random_forest/
 ├── data/
 │   └── .gitkeep
 ├── notebook/
-│   └── Decision_tree__Breast_cancer_dataset__from_scratch.ipynb
+│   └── random_forest.ipynb
 ├── README.md
 └── requirements.txt
 ```
 
-> **Note on data:** The dataset is not committed to this repo. It is loaded directly via `sklearn.datasets.load_breast_cancer()` inside the notebook, so no manual download is needed.
+> **Note on data:** The dataset is not committed to this repo. It is loaded directly via this url: https://raw.githubusercontent.com/datasciencedojo/datasets/master/titanic.csv inside the notebook, so no manual download is needed.
 
 ---
 
@@ -50,7 +56,7 @@ Key issues encountered and resolved during the project:
 
 ```bash
 git clone https://github.com/FranklinNwankwo/Implementing_Machine_learning_Algorithms_from_First_Principles.git
-cd "Implementing_Machine_learning_Algorithms_from_First_Principles/1. Supervised_Learning/3. decision_tree_breast_cancer"
+cd "Implementing_Machine_learning_Algorithms_from_First_Principles/1. Supervised_Learning/4. random_forest_titanic_survival"
 ```
 
 ### 2. Create and activate a virtual environment (recommended)
@@ -80,80 +86,71 @@ See `requirements.txt`. Core libraries used:
 
 | Library | Purpose |
 |---|---|
-| `numpy` | Linear algebra, Gini impurity, recursive tree splitting |
-| `pandas` | Data manipulation and EDA |
+| `numpy` | Linear algebra, Gini impurity, bootstrap sampling, tree/forest construction |
+| `pandas` | Data manipulation, feature engineering, EDA |
 | `matplotlib` | Visualizations |
 | `seaborn` | Statistical plots |
-| `scipy` | Spearman correlation for feature-importance validation |
-| `xgboost` | Gradient-boosted ensemble benchmark |
-| `scikit-learn` | Dataset loading, splitting, metrics, and benchmark models |
+| `scikit-learn` | Validation-phase benchmark models (Random Forest, GBM, AdaBoost, SVM, KNN) and cross-validation utilities |
 
 ---
 
 ## Limitations
 
-- **Exhaustive threshold search is O(n·d) per split**: the scratch tree evaluates every midpoint between sorted unique feature values at every node, which doesn't scale to very large datasets the way sklearn's optimised Cython implementation does.
-- **No native multi-class support**: the implementation is built and validated for binary classification only.
-- **Small test set (15%, ~85 samples)**: several models — including Logistic Regression — reach 100% test accuracy, which likely reflects the dataset's strong class separability and limited test-set size rather than guaranteed generalisation to unseen clinical data.
-- **Post-pruning is exploratory only**: cost-complexity pruning is demonstrated via sklearn's `ccp_alpha` path for theoretical illustration, not implemented from scratch or applied to the final scratch tree.
-- **No external validation cohort**: all evaluation is on splits of the same single-institution dataset; no true out-of-distribution or multi-site validation is performed.
+- **`Cabin` is ~77% missing**: rather than imputing, missingness itself is encoded as a signal (`HasCabin`) and a `Deck` feature is extracted only where known — the majority of cabin information for this dataset is simply unrecoverable.
+- **Mean-Decrease-in-Gini importance bias**: MDI is known to be biased toward high-cardinality features, so the feature-importance ranking should be read as directionally informative, not as a precise ranking.
+- **Small dataset (~891 passengers)**: after a three-way stratified split, the validation and test sets are small enough that subgroup error analysis (e.g. by `Title` or `FamilyGroup`) can be noisy for the smallest subgroups.
+- **No native handling of unseen categories beyond all-zero rows**: the manual one-hot encoder maps unseen validation/test categories to an all-zero indicator row rather than a dedicated "unknown" category, which slightly under-represents genuinely novel categories.
+- **Historical, single-event dataset**: the model captures evacuation-priority patterns specific to this ship and disaster; it has no claim to generalising beyond Titanic-like scenarios.
 
 ---
 
 ## Results
 
-Test-set performance across all six models:
+Validation-set performance across the custom Random Forest, sklearn's Random Forest, and the comparison models (Gradient Boosting, AdaBoost, SVM, KNN) is produced by the notebook's model-comparison cells, sorted by F1 score, along with a custom-vs-sklearn parity check (`|Δ Accuracy|`, `|Δ F1|`, `|Δ ROC-AUC|`) and a final train/OOB/validation/test summary table.
 
-| Model | Accuracy | Precision | Recall | F1 | ROC-AUC | PR-AUC | FN | FP |
-|---|---|---|---|---|---|---|---|---|
-| Scratch DT (Tuned) | 0.9535 | 0.9118 | 0.9688 | 0.9394 | 0.9754 | 0.9687 | 1 | 3 |
-| sklearn DT (Tuned) | 0.9535 | 0.9118 | 0.9688 | 0.9394 | 0.9754 | 0.9687 | 1 | 3 |
-| Random Forest | 0.9884 | 1.0000 | 0.9688 | 0.9841 | 1.0000 | 1.0000 | 1 | 0 |
-| XGBoost | 0.9767 | 1.0000 | 0.9375 | 0.9677 | 1.0000 | 1.0000 | 2 | 0 |
-| **Logistic Regression** | **1.0000** | **1.0000** | **1.0000** | **1.0000** | **1.0000** | **1.0000** | **0** | **0** |
-| SVM (RBF) | 0.9767 | 1.0000 | 0.9375 | 0.9677 | 1.0000 | 1.0000 | 2 | 0 |
+> This notebook's output cells were cleared before upload, so exact figures aren't available here — rerun top to bottom to regenerate the comparison table, parity check, and final summary printed by the notebook's own evaluation cells.
 
-The scratch Decision Tree matches sklearn's `DecisionTreeClassifier` exactly on every metric, confirming the from-scratch CART implementation is correct. Logistic Regression achieves a perfect test score with zero false negatives, but for **clinical deployment** the recommendation is the tuned Decision Tree with a lowered decision threshold (0.3–0.4) — it trades a small amount of raw performance for fully auditable, clinician-readable if-then decision rules, which matters for regulatory and clinical-trust reasons that a linear model's coefficients or an ensemble's aggregate votes don't provide.
+The notebook's own interpretation cells report that the custom implementation's absolute deltas against sklearn's Random Forest are small (|Δ| < 0.02) across accuracy, F1, and ROC-AUC — including close OOB-score agreement, which is a particularly strong correctness signal since OOB estimation depends on the bootstrap-sample tracking logic being right.
 
 ---
 
 ## What I learned:
 
-1. **Matching sklearn Exactly Is a Stronger Validation Than "Close Enough."**
+1. **OOB Scoring Is Cross-Validation You Get for Free.**
 
-The scratch tree didn't just come close to sklearn's `DecisionTreeClassifier` — it matched it on every single metric (0.9535 accuracy, 0.9688 recall, identical FN/FP counts). That level of agreement is a much stronger signal than a small performance gap would have been, because it rules out subtle bugs in the Gini computation, the split-selection logic, or the recursive tree-building itself, rather than just showing the two models land in a similar performance neighbourhood by coincidence.
+Roughly 36.8% of training samples are excluded from any given tree's bootstrap sample — and aggregated across the whole forest, virtually every sample ends up out-of-bag for a meaningful fraction of trees. Implementing OOB scoring meant the forest carries its own internal generalisation estimate at zero extra computational cost, which turned out to be more useful during hyperparameter search than repeatedly re-checking against a held-out validation set.
 
-2. **The Positive-Class Encoding Is Not a Cosmetic Choice.**
+2. **Variance Reduction Isn't Just a Claim — It's Directly Measurable.**
 
-sklearn's `load_breast_cancer` ships with `0 = Malignant, 1 = Benign`, which is backwards from clinical convention and, more importantly, backwards from how Recall, Precision, and the confusion matrix get interpreted. Flipping the encoding before any modelling started meant every downstream metric — especially which class "Recall" refers to — was unambiguous for the rest of the notebook, instead of requiring a mental relabelling every time a result was read.
+Rather than taking bagging's variance-reduction benefit on faith, running the same single Decision Tree across many random seeds and comparing its accuracy spread against the forest's accuracy spread made the effect concrete: the single tree's accuracy swings noticeably with the seed, while the forest's does not. Seeing $\text{Var}(\bar{T}) = \rho\sigma^2 + \frac{1-\rho}{B}\sigma^2$ show up as an actual, visible flattening of a distribution — not just a formula — was the most convincing part of the whole implementation.
 
-3. **Optimising for Accuracy Would Have Been the Wrong Default.**
+3. **The `n_estimators` Plateau Is the Bias-Variance Formula Showing Its Face.**
 
-With a ~62:38 Benign-to-Malignant split, a classifier that always predicts "Benign" already scores 62% accuracy while catching zero cancers. Naming Recall on the Malignant class as the primary metric from the start — before writing a single line of tree code — meant every later decision (threshold selection, hyperparameter tuning, model comparison) had a consistent yardstick, rather than accuracy quietly creeping back in as the tie-breaker.
+Accuracy climbs quickly as trees are added, then flattens. That's not a coincidence — it's the $1/B$ term in the variance formula shrinking toward zero while the correlated $\rho\sigma^2$ term stays put, since it doesn't depend on $B$ at all. The OOB curve tracking the validation curve closely throughout the sweep was a good secondary confirmation that OOB estimation could be trusted as a proxy during the sweep itself, not just after the fact.
 
-4. **`np.bincount` Over `Counter` Is a Real Performance Decision, Not Premature Optimisation.**
+4. **`max_depth` Sensitivity Reveals the Bias-Variance Trade-off More Clearly Than Any Single Metric.**
 
-Gini impurity gets computed at every candidate split during tree building, which for exhaustive threshold search across 30 features means millions of calls. Choosing `np.bincount` (O(n), no hashing) instead of Python's `Counter` for the class-count step wasn't a micro-optimisation for its own sake — it's the difference between a tree that builds in a reasonable time and one that doesn't, once the candidate-threshold count scales up.
+Watching the train-minus-OOB gap widen as `max_depth` increases — while validation accuracy peaks in the middle rather than at the extremes — made the abstract bias-variance trade-off into something directly readable off a chart, rather than something to reason about only in the abstract.
 
-5. **Threshold Midpoints Are Mathematically Equivalent to Raw Values, but Practically Better.**
+5. **`max_features='sqrt'` Isn't an Arbitrary Default.**
 
-Rather than testing every raw feature value as a candidate split point, the scratch tree computes midpoints between consecutive sorted unique values. This halves the number of candidates to evaluate and removes an entire class of boundary-ambiguity bugs (does `x <= v` or `x < v` put a tied value on the left or right?) — a good example of a mathematically-neutral choice that meaningfully simplifies the implementation.
+Sweeping `max_features` across `log2`, `sqrt`, and using all features showed the diversity-accuracy trade-off directly: too few candidate features per split risks weak splits when the randomly-chosen subset happens to be uninformative; using all features collapses back toward a plain bagged-tree ensemble as trees become more correlated. Seeing `sqrt` land near the empirical peak for this dataset — matching what's typically cited as a sensible classification default — was a useful check against just trusting the convention.
 
-6. **Ensemble Gains Come at a Real Interpretability Cost.**
+6. **Feature Engineering From `Name` and `Ticket` Mattered More Than Expected.**
 
-Random Forest and XGBoost both reach 1.0000 ROC-AUC, and Random Forest gets zero false positives — genuinely better raw numbers than the single tree. But neither produces a human-readable decision path the way a single tree's if-then rules do. Seeing the ensemble's numerical advantage sit right next to its interpretability cost, rather than treating "better metrics" as an automatic win, is what shaped the eventual recommendation for a tuned single tree in the clinical-deployment scenario.
+The ablation study quantifying each feature-engineering step's incremental contribution showed `Title` (extracted via regex from `Name`) as one of the largest single gains — it cleanly separates social role, gender, and age-proxy signal that raw `Sex` and `Age` only partially encode on their own. That the single biggest lever wasn't a modelling choice but a feature-engineering one was the most transferable lesson of the whole project.
 
-7. **A Perfect Score Is a Prompt to Check the Test Set, Not a Finish Line.**
+7. **A Manual One-Hot Encoder Forces You to Think About the Train/Val/Test Contract Explicitly.**
 
-Logistic Regression hitting 1.0000 on every single metric is a good result, but with only ~85 test samples and strong class separability in this dataset, a perfect score is at least as likely to reflect the small evaluation set as it is to reflect flawless generalisation. Treating a perfect number as something to interrogate — rather than something to simply report — was a useful instinct to build here, especially with a small clinical dataset.
+Writing the encoder's vocabulary-fitting logic by hand — rather than calling `pd.get_dummies` on the full dataset — made the leakage risk unavoidable to confront directly: the vocabulary has to come from the training set only, and validation/test categories not seen in training have to degrade gracefully (here, to an all-zero row) rather than silently creating new columns.
 
-8. **Threshold Tuning Applies to Trees Just as Much as to Logistic Regression.**
+8. **Threshold Tuning and Subgroup Analysis Together Catch What Aggregate Metrics Hide.**
 
-`predict_proba()` on the scratch tree returns the leaf's training class distribution, which meant the same threshold-sweep-for-recall approach used in earlier projects (in the fraud-detection logistic regression notebook) applied directly here too. Lowering the operating threshold below 0.5 trades some precision for higher recall — the right trade in a screening context where a missed malignancy is far costlier than a false alarm that gets ruled out on follow-up.
+A single F1-optimal threshold and a single aggregate accuracy number can both look healthy while masking uneven performance across passenger subgroups. Running subgroup error analysis by Sex, Pclass, Title, and FamilyGroup — rather than stopping at the aggregate confusion matrix — surfaced where the model's confidence was and wasn't well-calibrated, which is a habit worth carrying into every future classification project, not just this one.
 
-9. **Feature Importance Cross-Validated Against a Second Model Is More Trustworthy Than Feature Importance Alone.**
+9. **Matching sklearn Isn't Just a Sanity Check — It's a Debugging Tool.**
 
-Comparing the scratch tree's Gini-reduction-based feature importances against Random Forest's importances (and against Spearman correlation with the target) meant the top-ranked features weren't just an artefact of one particular tree's split order — they showed up as informative across multiple independent methods, which is a stronger basis for any downstream claim about which measurements matter clinically.
+Comparing the custom Random Forest against sklearn's implementation with matched hyperparameters, and explicitly tracing the residual gap to split-threshold sampling and floating-point aggregation differences rather than treating "close enough" as good enough, meant any larger discrepancy would have been a signal to go back and re-check the bootstrap or split-selection logic rather than something to explain away.
 
 ---
 
