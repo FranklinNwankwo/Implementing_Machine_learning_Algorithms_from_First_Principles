@@ -21,7 +21,7 @@ This project walks through the full supervised learning pipeline:
 
 Key issues encountered and resolved during the project:
 
-- sklearn's `load_breast_cancer` encodes labels as `0 = Malignant, 1 = Benign` — flipped to the clinical convention (`1 = Malignant`) so Recall/Precision/F1 are computed with Malignant as the positive class
+- sklearn's `load_breast_cancer` encodes labels as `0 = Malignant, 1 = Benign`, flipped to the clinical convention (`1 = Malignant`) so Recall/Precision/F1 are computed with Malignant as the positive class
 - Choosing Recall over accuracy as the primary metric, since a naive "always Benign" classifier already scores ~62% accuracy
 - Validating that the scratch tree's minor performance gap versus sklearn comes from threshold-enumeration and tie-breaking differences, not implementation bugs.
 - Balancing interpretability against ensemble performance for a clinical-deployment recommendation
@@ -94,7 +94,7 @@ See `requirements.txt`. Core libraries used:
 
 - **Exhaustive threshold search is O(n·d) per split**: the scratch tree evaluates every midpoint between sorted unique feature values at every node, which doesn't scale to very large datasets the way sklearn's optimised Cython implementation does.
 - **No native multi-class support**: the implementation is built and validated for binary classification only.
-- **Small test set (15%, ~85 samples)**: several models — including Logistic Regression — reach 100% test accuracy, which likely reflects the dataset's strong class separability and limited test-set size rather than guaranteed generalisation to unseen clinical data.
+- **Small test set (15%, ~85 samples)**: several models including Logistic Regression reach 100% test accuracy, which likely reflects the dataset's strong class separability and limited test-set size rather than guaranteed generalisation to unseen clinical data.
 - **Post-pruning is exploratory only**: cost-complexity pruning is demonstrated via sklearn's `ccp_alpha` path for theoretical illustration, not implemented from scratch or applied to the final scratch tree.
 - **No external validation cohort**: all evaluation is on splits of the same single-institution dataset; no true out-of-distribution or multi-site validation is performed.
 
@@ -113,7 +113,7 @@ Test-set performance across all six models:
 | **Logistic Regression** | **1.0000** | **1.0000** | **1.0000** | **1.0000** | **1.0000** | **1.0000** | **0** | **0** |
 | SVM (RBF) | 0.9767 | 1.0000 | 0.9375 | 0.9677 | 1.0000 | 1.0000 | 2 | 0 |
 
-The scratch Decision Tree matches sklearn's `DecisionTreeClassifier` exactly on every metric, confirming the from-scratch CART implementation is correct. Logistic Regression achieves a perfect test score with zero false negatives, but for **clinical deployment** the recommendation is the tuned Decision Tree with a lowered decision threshold (0.3–0.4) — it trades a small amount of raw performance for fully auditable, clinician-readable if-then decision rules, which matters for regulatory and clinical-trust reasons that a linear model's coefficients or an ensemble's aggregate votes don't provide.
+The scratch Decision Tree matches sklearn's `DecisionTreeClassifier` exactly on every metric, confirming the from-scratch CART implementation is correct. Logistic Regression achieves a perfect test score with zero false negatives, but for **clinical deployment** the recommendation is the tuned Decision Tree with a lowered decision threshold (0.3–0.4). It trades a small amount of raw performance for fully auditable, clinician-readable if-then decision rules, which matters for regulatory and clinical-trust reasons that a linear model's coefficients or an ensemble's aggregate votes don't provide.
 
 ---
 
@@ -121,11 +121,11 @@ The scratch Decision Tree matches sklearn's `DecisionTreeClassifier` exactly on 
 
 1. **Matching sklearn Exactly Is a Stronger Validation Than "Close Enough."**
 
-The scratch tree didn't just come close to sklearn's `DecisionTreeClassifier` — it matched it on every single metric (0.9535 accuracy, 0.9688 recall, identical FN/FP counts). That level of agreement is a much stronger signal than a small performance gap would have been, because it rules out subtle bugs in the Gini computation, the split-selection logic, or the recursive tree-building itself, rather than just showing the two models land in a similar performance neighbourhood by coincidence.
+The scratch tree didn't just come close to sklearn's `DecisionTreeClassifier`, it matched it on every single metric (0.9535 accuracy, 0.9688 recall, identical FN/FP counts). That level of agreement is a much stronger signal than a small performance gap would have been, because it rules out subtle bugs in the Gini computation, the split-selection logic, or the recursive tree-building itself, rather than just showing the two models land in a similar performance neighbourhood by coincidence.
 
 2. **The Positive-Class Encoding Is Not a Cosmetic Choice.**
 
-sklearn's `load_breast_cancer` ships with `0 = Malignant, 1 = Benign`, which is backwards from clinical convention and, more importantly, backwards from how Recall, Precision, and the confusion matrix get interpreted. Flipping the encoding before any modelling started meant every downstream metric — especially which class "Recall" refers to was unambiguous for the rest of the notebook, instead of requiring a mental relabelling every time a result was read.
+sklearn's `load_breast_cancer` ships with `0 = Malignant, 1 = Benign`, which is backwards from clinical convention and, more importantly, backwards from how Recall, Precision, and the confusion matrix get interpreted. Flipping the encoding before any modelling started meant every downstream metric, especially which class "Recall" refers to was unambiguous for the rest of the notebook, instead of requiring a mental relabelling every time a result was read.
 
 3. **Optimising for Accuracy Would Have Been the Wrong Default.**
 
@@ -137,7 +137,7 @@ Gini impurity gets computed at every candidate split during tree building, which
 
 5. **Threshold Midpoints Are Mathematically Equivalent to Raw Values, but Practically Better.**
 
-Rather than testing every raw feature value as a candidate split point, the scratch tree computes midpoints between consecutive sorted unique values. This halves the number of candidates to evaluate and removes an entire class of boundary-ambiguity bugs (does `x <= v` or `x < v` put a tied value on the left or right?) — a good example of a mathematically-neutral choice that meaningfully simplifies the implementation.
+Rather than testing every raw feature value as a candidate split point, the scratch tree computes midpoints between consecutive sorted unique values. This halves the number of candidates to evaluate and removes an entire class of boundary-ambiguity bugs (does `x <= v` or `x < v` put a tied value on the left or right?), a good example of a mathematically neutral choice that meaningfully simplifies the implementation.
 
 6. **Ensemble Gains Come at a Real Interpretability Cost.**
 
