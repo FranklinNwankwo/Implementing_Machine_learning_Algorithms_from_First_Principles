@@ -12,18 +12,18 @@ This is a binary classification problem — **Malignant** (positive class, cance
 
 This project walks through the full supervised learning pipeline:
 
-- **Exploratory Data Analysis (EDA)** — class distribution, correlation heatmap, feature distributions by class, outlier inspection, pairplots on the most separable features
-- **Mathematical Foundations** — Gini impurity, weighted Gini for a split, information gain, and a worked numerical example, plus a Gini-vs-Entropy comparison
-- **Model Implementation** — a full CART-style tree (`Node` class, recursive Gini-impurity splitting, threshold-midpoint search, `predict_proba`, and Gini-reduction-based feature importances) built from scratch with NumPy
-- **Hyperparameter Sensitivity Analysis** — `max_depth`, `min_samples_split`, and `min_samples_leaf` sweeps, plus 5-fold stratified cross-validation for stability
-- **Comparison Models** — benchmarked against `sklearn`'s `DecisionTreeClassifier`, Random Forest, XGBoost, Logistic Regression, and SVM (RBF)
-- **Final Evaluation** — ROC and Precision-Recall curves, confusion matrices, cost-complexity (post-)pruning, and decision-threshold optimisation for recall
+- **Exploratory Data Analysis (EDA)** — class distribution, correlation heatmap, feature distributions by class, outlier inspection, pairplots on the most separable features.
+- **Mathematical Foundations** — Gini impurity, weighted Gini for a split, information gain, and a worked numerical example, plus a Gini-vs-Entropy comparison.
+- **Model Implementation** — a full CART-style tree (`Node` class, recursive Gini-impurity splitting, threshold-midpoint search, `predict_proba`, and Gini-reduction-based feature importances) built from scratch with NumPy.
+- **Hyperparameter Sensitivity Analysis** — `max_depth`, `min_samples_split`, and `min_samples_leaf` sweeps, plus 5-fold stratified cross-validation for stability.
+- **Comparison Models** — benchmarked against `sklearn`'s `DecisionTreeClassifier`, Random Forest, XGBoost, Logistic Regression, and SVM (RBF).
+- **Final Evaluation** — ROC and Precision-Recall curves, confusion matrices, cost-complexity (post-)pruning, and decision-threshold optimisation for recall.
 
 Key issues encountered and resolved during the project:
 
 - sklearn's `load_breast_cancer` encodes labels as `0 = Malignant, 1 = Benign` — flipped to the clinical convention (`1 = Malignant`) so Recall/Precision/F1 are computed with Malignant as the positive class
 - Choosing Recall over accuracy as the primary metric, since a naive "always Benign" classifier already scores ~62% accuracy
-- Validating that the scratch tree's minor performance gap versus sklearn comes from threshold-enumeration and tie-breaking differences, not implementation bugs
+- Validating that the scratch tree's minor performance gap versus sklearn comes from threshold-enumeration and tie-breaking differences, not implementation bugs.
 - Balancing interpretability against ensemble performance for a clinical-deployment recommendation
 
 ---
@@ -125,15 +125,15 @@ The scratch tree didn't just come close to sklearn's `DecisionTreeClassifier` �
 
 2. **The Positive-Class Encoding Is Not a Cosmetic Choice.**
 
-sklearn's `load_breast_cancer` ships with `0 = Malignant, 1 = Benign`, which is backwards from clinical convention and, more importantly, backwards from how Recall, Precision, and the confusion matrix get interpreted. Flipping the encoding before any modelling started meant every downstream metric — especially which class "Recall" refers to — was unambiguous for the rest of the notebook, instead of requiring a mental relabelling every time a result was read.
+sklearn's `load_breast_cancer` ships with `0 = Malignant, 1 = Benign`, which is backwards from clinical convention and, more importantly, backwards from how Recall, Precision, and the confusion matrix get interpreted. Flipping the encoding before any modelling started meant every downstream metric — especially which class "Recall" refers to was unambiguous for the rest of the notebook, instead of requiring a mental relabelling every time a result was read.
 
 3. **Optimising for Accuracy Would Have Been the Wrong Default.**
 
-With a ~62:38 Benign-to-Malignant split, a classifier that always predicts "Benign" already scores 62% accuracy while catching zero cancers. Naming Recall on the Malignant class as the primary metric from the start — before writing a single line of tree code — meant every later decision (threshold selection, hyperparameter tuning, model comparison) had a consistent yardstick, rather than accuracy quietly creeping back in as the tie-breaker.
+With a ~62:38 Benign-to-Malignant split, a classifier that always predicts "Benign" already scores 62% accuracy while catching zero cancers. Naming Recall on the Malignant class as the primary metric from the start before writing a single line of tree code meant every later decision (threshold selection, hyperparameter tuning, model comparison) had a consistent yardstick, rather than accuracy quietly creeping back in as the tie-breaker.
 
 4. **`np.bincount` Over `Counter` Is a Real Performance Decision, Not Premature Optimisation.**
 
-Gini impurity gets computed at every candidate split during tree building, which for exhaustive threshold search across 30 features means millions of calls. Choosing `np.bincount` (O(n), no hashing) instead of Python's `Counter` for the class-count step wasn't a micro-optimisation for its own sake — it's the difference between a tree that builds in a reasonable time and one that doesn't, once the candidate-threshold count scales up.
+Gini impurity gets computed at every candidate split during tree building, which for exhaustive threshold search across 30 features means millions of calls. Choosing `np.bincount` (O(n), no hashing) instead of Python's `Counter` for the class-count step wasn't a micro-optimisation for its own sake. It's the difference between a tree that builds in a reasonable time and one that doesn't, once the candidate-threshold count scales up.
 
 5. **Threshold Midpoints Are Mathematically Equivalent to Raw Values, but Practically Better.**
 
@@ -141,19 +141,19 @@ Rather than testing every raw feature value as a candidate split point, the scra
 
 6. **Ensemble Gains Come at a Real Interpretability Cost.**
 
-Random Forest and XGBoost both reach 1.0000 ROC-AUC, and Random Forest gets zero false positives — genuinely better raw numbers than the single tree. But neither produces a human-readable decision path the way a single tree's if-then rules do. Seeing the ensemble's numerical advantage sit right next to its interpretability cost, rather than treating "better metrics" as an automatic win, is what shaped the eventual recommendation for a tuned single tree in the clinical-deployment scenario.
+Random Forest and XGBoost both reach 1.0000 ROC-AUC, and Random Forest gets zero false positives, genuinely better raw numbers than the single tree. But neither produces a human-readable decision path the way a single tree's if-then rules do. Seeing the ensemble's numerical advantage sit right next to its interpretability cost, rather than treating "better metrics" as an automatic win, is what shaped the eventual recommendation for a tuned single tree in the clinical-deployment scenario.
 
 7. **A Perfect Score Is a Prompt to Check the Test Set, Not a Finish Line.**
 
-Logistic Regression hitting 1.0000 on every single metric is a good result, but with only ~85 test samples and strong class separability in this dataset, a perfect score is at least as likely to reflect the small evaluation set as it is to reflect flawless generalisation. Treating a perfect number as something to interrogate — rather than something to simply report — was a useful instinct to build here, especially with a small clinical dataset.
+Logistic Regression hitting 1.0000 on every single metric is a good result, but with only ~85 test samples and strong class separability in this dataset, a perfect score is at least as likely to reflect the small evaluation set as it is to reflect flawless generalisation. Treating a perfect number as something to interrogate rather than something to simply report was a useful instinct to build here, especially with a small clinical dataset.
 
 8. **Threshold Tuning Applies to Trees Just as Much as to Logistic Regression.**
 
-`predict_proba()` on the scratch tree returns the leaf's training class distribution, which meant the same threshold-sweep-for-recall approach used in earlier projects (in the fraud-detection logistic regression notebook) applied directly here too. Lowering the operating threshold below 0.5 trades some precision for higher recall — the right trade in a screening context where a missed malignancy is far costlier than a false alarm that gets ruled out on follow-up.
+`predict_proba()` on the scratch tree returns the leaf's training class distribution, which meant the same threshold-sweep-for-recall approach used in earlier projects (in the fraud-detection logistic regression notebook) applied directly here too. Lowering the operating threshold below 0.5 trades some precision for higher recall, the right trade in a screening context where a missed malignancy is far costlier than a false alarm that gets ruled out on follow-up.
 
 9. **Feature Importance Cross-Validated Against a Second Model Is More Trustworthy Than Feature Importance Alone.**
 
-Comparing the scratch tree's Gini-reduction-based feature importances against Random Forest's importances (and against Spearman correlation with the target) meant the top-ranked features weren't just an artefact of one particular tree's split order — they showed up as informative across multiple independent methods, which is a stronger basis for any downstream claim about which measurements matter clinically.
+Comparing the scratch tree's Gini-reduction-based feature importances against Random Forest's importances (and against Spearman correlation with the target) meant the top-ranked features weren't just an artefact of one particular tree's split order, they showed up as informative across multiple independent methods, which is a stronger basis for any downstream claim about which measurements matter clinically.
 
 ---
 
