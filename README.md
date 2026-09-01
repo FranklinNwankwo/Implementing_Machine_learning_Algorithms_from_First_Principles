@@ -15,6 +15,7 @@ Each project follows the full ML pipeline: exploratory data analysis, feature en
 | 02 | [Logistic Regression](./1.%20Supervised_Learning/2.%20logistic_regression_credit_card_fraud/) | Gradient Descent (Weighted BCE / SMOTE) | Credit Card Fraud Detection | Complete |
 | 03 | [Decision Tree](./1.%20Supervised_Learning/3.%20decision_tree_breast_cancer/) | CART (Gini Impurity) | Breast Cancer Wisconsin | Complete |
 | 04 | [Random Forest](./1.%20Supervised_Learning/4.%20random_forest_titanic_survival/) | Bagging + Random Feature Subsampling | Titanic Survival | Complete |
+| 05 | [Gradient Boosting](./1.%20Supervised_Learning/5.%20gradient_boosting_adult_census_income/) | Functional Gradient Descent (Boosting) | Adult Census Income | Complete |
 
 
 ---
