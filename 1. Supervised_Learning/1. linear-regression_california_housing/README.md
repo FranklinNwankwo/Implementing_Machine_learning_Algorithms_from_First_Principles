@@ -66,7 +66,7 @@ pip install -r requirements.txt
 ### 4. Launch the notebook
 
 ```bash
-jupyter notebook notebooks/
+jupyter notebook notebook/
 ```
 
 ---
@@ -91,8 +91,8 @@ See `requirements.txt`. Core libraries used:
 - **`housing_median_age` censoring**: values are capped at 52 years, with all older neighborhoods grouped into a single bin. This produces the same right-censoring effect as the target variable and limits the model's ability to distinguish ages beyond that threshold.
 - **Data leakage in imputation**: missing `total_bedrooms` values were imputed with the column median computed on the full dataset *before* the train/test split, so the training statistics were influenced by test-set values. A stricter pipeline would fit the imputation median on the training set only and apply it to the test set.
 - Linear regression assumes a linear relationship between features and the target; the California Housing data has notable non-linearities.
-- Outliers in `AveRooms` and `AveOccup` affect coefficient estimates.
-- Geographic features (`Latitude`, `Longitude`) are used as raw inputs rather than being modelled spatially.
+- Outliers in `total_rooms` and `population` affect coefficient estimates.
+- Geographic features (`longitude`, `latitude`) are used as raw inputs rather than being modelled spatially.
 - No regularisation (Ridge/Lasso) is applied; the model may overfit on noisy features.
 ---
 
@@ -126,9 +126,9 @@ Getting it wrong in any of these areas produces models that diverge, oscillate, 
 
 4. Early Stopping
 
-Rather than training for a fixed number of epochs, I implemented early stopping: monitoring the validation loss after each epoch and halting training when it stopped improving. This was my first exposure to the idea that more training isn't always better, and that generalization and training loss can diverge if you let the model train too long.
+Rather than training for a fixed number of epochs, I implemented early stopping: monitoring the loss after each iteration and halting training when it stopped improving by more than a small tolerance. This was my first exposure to the idea that more training isn't always better, and that continuing to optimize past the point of meaningful improvement is just wasted computation.
 
-Early stopping also introduced the concept of "patience", waiting a certain number of epochs before giving up, to avoid stopping prematurely on a temporary plateau. Getting this right required careful tracking of the best weights seen so far and restoring them at the end of training, not just stopping at the last epoch.
+Getting this right required tracking the loss history at every iteration and comparing successive values, so that training stopped as soon as it plateaued rather than running for the full fixed iteration budget regardless of convergence.
 
 5. Feature Engineering, and Why It's Dangerous
 
@@ -142,9 +142,9 @@ Multicollinearity. Even when the matrix is technically invertible, high correlat
 
 6. Data Leakage: Small Mistake, Big Consequences
 
-At one point in the project, I was fitting my StandardScaler on the entire dataset before splitting into train and test sets. This is data leakage: information from the test set is bleeding into the training process, making the model's evaluation metrics falsely optimistic.
+At one point in the project, I was imputing missing `total_bedrooms` values with the median computed on the *entire* dataset, before splitting into train and test sets. This is data leakage: information from the test set is bleeding into the training process, making the model's evaluation metrics falsely optimistic, since the imputed values on the test rows were influenced by statistics drawn from the test set itself.
 
-The fix is trivial: fit the scaler only on the training set, then use that same fitted scaler to transform both train and test. But understanding why this matters took deliberate thought. The test set is supposed to simulate future, unseen data. If your preprocessing has already "seen" that data, you're not actually measuring generalization, you're measuring something closer to memorization of test statistics. This was a good lesson in the gap between code that runs and code that's correct.
+The fix is straightforward in principle: compute the median only on the training set, then use that same value to fill missing entries in both train and test. But understanding why this matters took deliberate thought. The test set is supposed to simulate future, unseen data. If your preprocessing has already "seen" that data, even indirectly through a single summary statistic, you're not actually measuring generalization, you're measuring something closer to memorization of test statistics. This was a good lesson in the gap between code that runs and code that's correct.
 
 7. Numerical Stability: Overflow Errors in Preprocessing
 
@@ -165,7 +165,7 @@ If I had to summarize the meta-lesson from this project in one sentence: debuggi
 
 Looking back, there are several things I'd change if I were starting this project over. Not because the process was wrong, but because I now understand where I was flying blind and where a bit more structure upfront would have saved a lot of debugging time later.
 
-Define the pipeline before writing any code: I built the pipeline somewhat organically: adding preprocessing steps, then features, then realizing something earlier was wrong and having to backtrack. Next time I'd sketch the full pipeline on paper first: what transformations happen in what order, what state each feature should be in at each stage, and where the train/test split boundary sits relative to every preprocessing step. That single diagram would have prevented the data leakage issue and the double-transformation overflow bug entirely.
+Define the pipeline before writing any code: I built the pipeline somewhat organically: adding preprocessing steps, then features, then realizing something earlier was wrong and having to backtrack. Next time I'd sketch the full pipeline on paper first: what transformations happen in what order, what state each feature should be in at each stage, and where the train/test split boundary sits relative to every preprocessing step. That would have prevented the imputation leakage issue and the double-transformation overflow bug entirely.
 
 Track feature state explicitly: A lot of my debugging time was spent figuring out whether a given feature had already been log-transformed, scaled, or had an interaction term derived from it. I'd solve this by being far more deliberate about naming conventions and maintaining a simple record of what had been applied to each column at each stage. It sounds tedious, but it's much less tedious than tracing an overflow error backwards through five preprocessing steps.
 
@@ -173,9 +173,9 @@ Validate incrementally, not just at the end: I compared against scikit-learn onl
 
 Be more deliberate about feature selection before adding complexity: I introduced engineered features somewhat aggressively before fully understanding the baseline model's behavior. The rank deficiency and multicollinearity issues that followed were a direct consequence. A cleaner approach would be to fully understand and validate the model on raw features first, then add engineered ones incrementally, checking the condition number and correlation matrix after each addition rather than all at once.
 
-Write tests for preprocessing steps: The bugs that cost me the most time; leakage, double-transformations, rank deficiency, were all in the data pipeline, not in the model math. Simple assertions (e.g., confirming the scaler was fit only on training data, checking that no feature has been transformed twice, verifying the design matrix rank equals the number of features) would have caught most of them immediately. Treating preprocessing code with the same rigor as model code is something I'll prioritize going forward.
+Write tests for preprocessing steps: The bugs that cost me the most time; imputation leakage, double-transformations, rank deficiency, were all in the data pipeline, not in the model math. Simple assertions (e.g., confirming the imputation median was computed only on training data, checking that no feature has been transformed twice, verifying the design matrix rank equals the number of features) would have caught most of them immediately. Treating preprocessing code with the same rigor as model code is something I'll prioritize going forward.
 
-Document assumptions as I go: Several bugs were rooted in me forgetting an assumption I'd made earlier; that a certain feature had already been log-transformed, or that a scaler had been fit on a particular subset of the data. Writing those assumptions down inline, in the code, at the time I made them would have made the debugging process dramatically faster. Going forward, a comment explaining why a step is done a certain way is just as important as the step itself.
+Document assumptions as I go: Several bugs were rooted in me forgetting an assumption I'd made earlier; that a certain feature had already been log-transformed, or that a statistic had been computed on a particular subset of the data. Writing those assumptions down inline, in the code, at the time I made them would have made the debugging process dramatically faster. Going forward, a comment explaining why a step is done a certain way is just as important as the step itself.
 
 
 ## Author

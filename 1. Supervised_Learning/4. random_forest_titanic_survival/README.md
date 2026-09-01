@@ -2,7 +2,7 @@
 
 An end-to-end machine learning project implementing a Random Forest classifier using only NumPy and Pandas, applied to the [Titanic survival dataset](https://www.kaggle.com/c/titanic).
 
-Built to understand the fundamentals of ensemble learning — bagging, random feature subsampling, and Out-of-Bag estimation — without relying on high-level abstractions.
+Built to understand the fundamentals of ensemble learning — bagging, random feature subsampling, and Out-of-Bag estimation, without relying on high-level abstractions.
 
 ---
 
@@ -41,7 +41,7 @@ Key issues encountered and resolved during the project:
 ├── data/
 │   └── .gitkeep
 ├── notebook/
-│   └── random_forest.ipynb
+│   └── random_forest (Titanic_Survival).ipynb
 ├── README.md
 └── requirements.txt
 ```
@@ -106,11 +106,35 @@ See `requirements.txt`. Core libraries used:
 
 ## Results
 
-Validation-set performance across the custom Random Forest, sklearn's Random Forest, and the comparison models (Gradient Boosting, AdaBoost, SVM, KNN) is produced by the notebook's model-comparison cells, sorted by F1 score, along with a custom-vs-sklearn parity check (`|Δ Accuracy|`, `|Δ F1|`, `|Δ ROC-AUC|`) and a final train/OOB/validation/test summary table.
+Validation-set performance across the custom Random Forest, sklearn's Random Forest, and the comparison models (Gradient Boosting, AdaBoost, SVM, KNN), sorted by F1 score:
 
-> This notebook's output cells were cleared before upload, so exact figures aren't available here — rerun top to bottom to regenerate the comparison table, parity check, and final summary printed by the notebook's own evaluation cells.
+| Model | Accuracy | Precision | Recall | F1 | ROC-AUC |
+|---|---|---|---|---|---|
+| SVM (RBF) | 0.8496 | 0.7818 | 0.8431 | 0.8113 | 0.8611 |
+| Gradient Boosting | 0.8571 | 0.8810 | 0.7255 | 0.7957 | 0.9376 |
+| sklearn Random Forest | 0.8421 | 0.8000 | 0.7843 | 0.7921 | 0.9065 |
+| **Custom Random Forest** | **0.8421** | **0.8000** | **0.7843** | **0.7921** | **0.9075** |
+| AdaBoost | 0.8271 | 0.7692 | 0.7843 | 0.7767 | 0.8980 |
+| KNN (k=5) | 0.8195 | 0.7755 | 0.7451 | 0.7600 | 0.8615 |
 
-The notebook's own interpretation cells report that the custom implementation's absolute deltas against sklearn's Random Forest are small (|Δ| < 0.02) across accuracy, F1, and ROC-AUC — including close OOB-score agreement, which is a particularly strong correctness signal since OOB estimation depends on the bootstrap-sample tracking logic being right.
+**Custom-vs-sklearn parity check** (matched hyperparameters, validation set): `|Δ Accuracy| = 0.00%`, `|Δ F1| = 0.0000`, `|Δ ROC-AUC| = 0.0010`. OOB accuracy is likewise close — 82.66% (custom) vs. 83.15% (sklearn) — a particularly strong correctness signal since OOB estimation depends on the bootstrap-sample tracking logic being right.
+
+**Final model summary** (custom Random Forest, tuned hyperparameters):
+
+| Metric | Value |
+|---|---|
+| OOB Accuracy | 82.66% |
+| 5-Fold CV Accuracy | 83.47% ± 1.98% |
+| Validation Accuracy (τ=0.5) | 84.21% |
+| Validation F1 | 0.7921 |
+| Validation ROC-AUC | 0.9075 |
+| Test Accuracy (τ=0.5) | 80.00% |
+| Test F1 | 0.7379 |
+| Test ROC-AUC | 0.8255 |
+| Optimal threshold τ* | 0.48 |
+| Test Accuracy (τ*=0.48) | 80.00% |
+
+Gradient Boosting and SVM edge out the Random Forest on raw metrics (highest F1 and ROC-AUC respectively), and the custom implementation tracks sklearn's Random Forest almost exactly, the small residual ROC-AUC gap (0.0010) is consistent with split-threshold sampling and floating-point aggregation differences rather than an implementation bug. The gap between validation accuracy (84.21%) and test accuracy (80.00%) is within the expected noise for a ~135-sample test set and is not evidence of overfitting on its own, given the close OOB/CV/validation agreement above.
 
 ---
 

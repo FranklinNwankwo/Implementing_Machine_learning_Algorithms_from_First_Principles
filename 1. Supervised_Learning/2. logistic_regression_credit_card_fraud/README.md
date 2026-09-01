@@ -21,11 +21,12 @@ This project walks through the full supervised learning pipeline for an extremel
 
 Key issues encountered and resolved during the project:
 
-- Choosing evaluation metrics that don't lie under 99.83% majority-class accuracy
+- Choosing evaluation metrics that don't lie under 99.84% majority-class accuracy
 - Data leakage risk from scaling, SMOTE, or threshold tuning touching validation/test data
 - Class imbalance collapsing gradient descent into predicting the majority class
 - Miscalibrated probabilities produced by class weighting and oversampling
-- Distinguishing threshold errors from fundamental (irrecoverable) linear-boundary errors
+- Distinguishing a genuine cost/precision trade-off from a false claim of "irrecoverable" errors (see Performance Ceiling in Results)
+- Brier score being a misleading top-line calibration metric at this base rate (see Results)
 
 ---
 
@@ -94,40 +95,51 @@ See `requirements.txt`. Core libraries used:
 
 ## Limitations
 
-- **Linear separability assumption**: the decision boundary is a hyperplane. At the lowest threshold tested (τ=0.01), both models still miss a subset of fraud cases regardless of threshold, evidence these are fundamental errors, not threshold errors.
+- **Linear separability.** Both from-scratch models need an almost-zero threshold (τ≈0.003–0.007) to catch every single fraud case in the test set, at a precision of ~0.002, essentially flagging everyone as fraud. That's a real cost/precision limitation, but not literal irrecoverability: `sigmoid(z) > 0` for every finite `z`, so recall trivially reaches 1.0 for *any* model at a low enough threshold. The tree-based benchmarks (Random Forest, XGBoost outperforming both LR variants on F2/AUC-PR) are the actual controlled evidence that a nonlinear boundary helps here.
 - **PCA information ceiling**: `V1`–`V28` were PCA-transformed upstream by the dataset creators. Any fraud-relevant signal discarded in that transformation is permanently invisible to any model trained on this data, and the resulting weights can't be mapped back to business-meaningful features.
 - **SMOTE interpolates blindly**: synthetic samples are generated between any two minority-class neighbours regardless of whether the interpolated point is realistic or falls near a class boundary.
 - **48-hour dataset window**: fraud patterns evolve over time; no concept-drift mechanism is implemented.
 - **Independence assumption untestable**: there is no cardholder ID, so within-cardholder correlation across multiple transactions can't be measured or corrected for.
 - **No explicit regularisation**: L2 weight decay was not implemented on the from-scratch model; early stopping is its sole overfitting control. This is also the likely reason its AUC-PR outpaces sklearn's L2-regularised LR (see Results).
+- **Brier score is not a fair calibration bar at this prevalence.** Predicting p≈0 for every transaction is "correct" 99.84% of the time by construction, so a majority-class dummy trivially posts a near-zero Brier score with zero actual fraud-detection skill. Both from-scratch models score *worse* than the dummy on raw Brier (see Results); that reflects the metric's blind spot at extreme imbalance, not a calibration failure; AUC-ROC/AUC-PR/F2 are the metrics that actually reflect fraud-detection skill here.
 
 ---
 
 ## Results
 
-Values below are the actual outputs of the notebook (`SEED=42`), taken directly from the executed comparison cell, not estimates.
+Values below are the actual outputs of the notebook (`SEED=42`), taken directly from the executed evaluation cells, not estimates.
 
-**Dummy baseline** (always predicts legitimate): Accuracy 99.836%, Precision 0.0000, Recall 0.0000, F2 0.0000, TP 0, FN 70, FP 0, AUC-PR ≈ 0.0017 (the fraud base rate — the no-skill floor).
+**Dummy baseline** (always predicts legitimate): Accuracy 99.84%, Precision 0.0000, Recall 0.0000, F2 0.0000, TP 0, FN 70, FP 0, AUC-PR ≈ 0.0017 (the fraud base rate — the no-skill floor).
 
 | Model | τ | Precision | Recall | F2 | AUC-PR | AUC-ROC | TP | FN | FP |
 |---|---|---|---|---|---|---|---|---|---|
-| **LR A — Weighted BCE (from scratch)** | 0.987 | 0.6667 | 0.8286 | 0.7902 | **0.5578** | 0.9770 | 58 | 12 | 29 |
-| **LR B — SMOTE (from scratch)** | 0.688 | 0.6556 | **0.8429** | **0.7973** | 0.4682 | 0.9749 | 59 | 11 | 31 |
+| **LR A — Weighted BCE (from scratch)** | 0.987 | 0.6667 | 0.8286 | 0.7902 | 0.5578 | **0.9770** | 58 | 12 | 29 |
+| **LR B — SMOTE (from scratch)** | 0.767 | 0.6667 | 0.8286 | 0.7902 | 0.7548 | 0.9750 | 58 | 12 | 29 |
 | sklearn LogisticRegression | 0.990 | 0.6105 | 0.8286 | 0.7733 | 0.2897 | 0.9783 | 58 | 12 | 37 |
-| Decision Tree | 0.990 | 0.6292 | 0.8000 | 0.7588 | 0.2619 | 0.8871 | 56 | 14 | 33 |
-| **Random Forest** | 0.626 | **0.7973** | 0.8429 | **0.8333** | **0.5739** | **0.9795** | 59 | 11 | **15** |
-| XGBoost | 0.797 | **0.9661** | 0.8143 | 0.8407 | 0.4425 | 0.9487 | 57 | 13 | **2** |
+| Decision Tree | 0.990 | 0.6292 | 0.8000 | 0.7588 | 0.6619 | 0.8871 | 56 | 14 | 33 |
+| Random Forest | 0.626 | 0.7973 | **0.8429** | 0.8333 | 0.7810 | **0.9795** | 59 | 11 | 15 |
+| **XGBoost** | 0.797 | **0.9661** | 0.8143 | **0.8407** | **0.8354** | 0.9487 | 57 | 13 | **2** |
 
-**Model A vs. Model B is not a clean win for either side.** Weighted BCE and SMOTE are genuinely different interventions with different trade-offs:
-- **Model A (Weighted BCE)** wins on Precision, AUC-PR (0.5578 vs 0.4682), and AUC-ROC — its decision boundary separates the fraud region more cleanly.
-- **Model B (SMOTE)** wins on Recall and F2, the metric this project explicitly optimises for (β=2 weights recall twice as heavily as precision), since a missed fraud is a direct financial loss.
-- Which model is "better" therefore depends on which metric the business prioritises. Optimising purely for F2, SMOTE narrowly wins. Optimising for the threshold-independent AUC-PR (the metric this project treats as primary for imbalanced problems), weighted BCE wins clearly.
+**Model A and Model B tie exactly on Precision/Recall/F2/TP/FN/FP** at their respective optimal thresholds, a genuine coincidence, not a bug (they score visibly differently from each other on the validation-set threshold sweep earlier in the notebook, and their full Precision-Recall curves differ). With only 70 fraud cases in the test set, point-estimate metrics like these have limited resolution and shouldn't be over-read either way.
 
-**Both from-scratch models beat sklearn's LogisticRegression on AUC-PR** (0.5578 / 0.4682 vs. 0.2897) despite similar recall, most likely because sklearn's default L2 regularisation pulls its probability estimates toward more conservative values, while the from-scratch model has no regularisation term.
+**AUC-PR — computed across the full threshold range rather than one operating point — is the metric that actually separates the two models, and Model B wins it clearly** (0.7548 vs 0.5578). The threshold story is still informative on its own: Model A needs τ≈0.987 to hit its optimal point, it only flags fraud when almost certain, while Model B reaches the *same* precision/recall at a meaningfully lower τ≈0.767, consistent with SMOTE giving the decision boundary richer signal in the fraud region rather than relying purely on reweighted loss.
 
-**The tree-based benchmarks tell the real story about the linear boundary.** Random Forest posts the best overall numbers across the board (highest F2, highest AUC-PR, highest AUC-ROC, fewest false alarms among the balanced models), and XGBoost achieves near-perfect precision (0.9661) with only 2 false alarms, at the cost of lower recall. This is the practical demonstration of the project's central thesis: a linear model has a real, measurable ceiling on this dataset, and closing the gap requires a nonlinear decision boundary.
+**Both from-scratch models beat sklearn's LogisticRegression on AUC-PR** (0.5578 / 0.7548 vs. 0.2897) despite similar recall and F2, most likely because sklearn's default L2 regularisation pulls its probability estimates toward more conservative values, while the from-scratch model has no regularisation term — AUC-PR, being threshold-independent and rank-sensitive, rewards the wider probability spread this produces. See Limitations for the corresponding gap this leaves in the from-scratch model.
 
-**The dummy row is intentional.** 99.836% accuracy while catching zero fraud is the clearest possible illustration of why accuracy is the wrong metric for this problem.
+**XGBoost is the strongest model overall** — highest F2 (0.8407) and highest AUC-PR (0.8354), plus near-perfect precision (0.9661) with only 2 false alarms, at the cost of somewhat lower recall than Random Forest. **Random Forest is close behind and takes the highest recall (0.8429) and highest AUC-ROC (0.9795).** Both tree ensembles outperform both logistic regression variants on F2 and AUC-PR — real, controlled evidence (identical pipeline, identical metrics) that a nonlinear decision boundary captures fraud patterns a hyperplane can't fully reach, though **Model B's own AUC-PR (0.7548) already lands in the same range as Random Forest's (0.7810)** — the gap between "best linear" and "best nonlinear" here is real but not enormous.
+
+**The dummy row is intentional.** 99.84% accuracy while catching zero fraud is the clearest possible illustration of why accuracy is the wrong metric for this problem.
+
+
+### Calibration — Brier score
+
+| | Brier score (lower = less raw squared error) |
+|---|---|
+| Dummy baseline | 0.001645 |
+| Model A (Weighted BCE) | 0.025058 |
+| Model B (SMOTE) | 0.002776 |
+
+Both models score **worse** than the dummy on raw Brier score. This is expected, not a calibration failure: at 0.167% prevalence, predicting p≈0 for everyone is "correct" 99.84% of the time by construction, so the dummy gets an artificially tiny Brier score with zero actual fraud-detection skill. Beating it isn't a meaningful bar here — AUC-ROC (0.977 / 0.975), AUC-PR (0.558 / 0.755), and F2 (0.790 / 0.790) are the metrics that reflect real fraud-detection skill; Brier score at this imbalance mainly measures how "confidently correct" a classifier is about the overwhelming legitimate majority, which a fraud-focused model with extreme class weighting or oversampling is not optimising for.
 
 ---
 
@@ -137,17 +149,17 @@ Values below are the actual outputs of the notebook (`SEED=42`), taken directly 
 
 The first real lesson of this project had nothing to do with modelling, it was about metric selection. A classifier that predicts "legitimate" for every single transaction hits 99.84% accuracy while catching zero fraud. Building that dummy baseline explicitly, rather than skipping straight to the real model, made it viscerally clear why Recall, F2-score, and PR-AUC have to be the primary metrics under this kind of imbalance, and why accuracy has to be actively excluded, not just deprioritized.
 
-2. **Weighted Loss vs. Oversampling Are Genuinely Different Interventions — With No Automatic Winner.**
+2. **Weighted Loss vs. Oversampling Are Genuinely Different Interventions — Even When They Tie on Point Metrics.**
 
-Going in, I expected class-weighted BCE and SMOTE to be roughly interchangeable fixes for imbalance. They're not, and the results don't even point cleanly in one direction: weighted BCE won on precision and AUC-PR, SMOTE won on recall and F2. Weighted BCE reshapes the loss landscape so fraud errors are penalised more, but the model still only sees the real fraud examples. SMOTE physically populates the fraud region of feature space with synthetic points, trading some precision for a boundary that catches more fraud. They ended up with different optimal thresholds (τ≈0.987 vs τ≈0.688), different calibration behaviour, and different false-positive rates, evidence that two techniques solving the "same" problem can produce genuinely different, non-dominated models.
+Going in, I expected class-weighted BCE and SMOTE to be roughly interchangeable fixes for imbalance. The surprise was that they landed on *identical* Precision/Recall/F2/confusion matrices at their respective optimal thresholds (58 TP / 12 FN / 29 FP for both), a coincidence given how differently they behave on the validation-set threshold sweep, and a reminder that with only 70 test-set fraud cases, point-estimate metrics have limited resolution. What actually separated them was AUC-PR, computed across the whole threshold range rather than one operating point: Model B (SMOTE) at 0.7548 clearly ahead of Model A (Weighted BCE) at 0.5578. They also reached their tied operating points at very different thresholds (τ≈0.987 vs τ≈0.767), evidence that SMOTE's synthetic points genuinely reshape the probability landscape rather than just rescaling it the way class weighting does.
 
 3. **The Default Threshold of 0.5 Is an Assumption, Not a Law.**
 
 τ=0.5 implicitly assumes false positives and false negatives cost the same. In fraud detection they don't. A missed fraud is a direct financial loss, a false alarm is customer friction. Implementing an F-beta (β=2) sweep on the validation set to explicitly weight recall over precision, rather than accepting the sklearn default, was the point where threshold selection stopped feeling like an afterthought and started feeling like a first-class modelling decision.
 
-4. **A High AUC Doesn't Mean the Probabilities Are Trustworthy.**
+4. **A High AUC Doesn't Mean the Probabilities Are Trustworthy, and Even the "Trustworthy" Check Needs Checking.**
 
-Both models score AUC-ROC above 0.97, which looks great in isolation and would have been misleading to stop at. A model can rank fraud well while still being poorly calibrated. Quantile-based bins were necessary here instead of equal-width ones, since equal-width bins are mostly empty at 0.17% fraud prevalence.
+Both models score AUC-ROC above 0.97, which looks great in isolation and would have been misleading to stop at. Quantile-based bins were necessary for the reliability diagrams instead of equal-width ones, since equal-width bins are mostly empty at 0.17% fraud prevalence. But the calibration story went a step further than expected: raw Brier score actually favours the do-nothing dummy classifier (0.0016) over both real models (0.0251 / 0.0028), which at first reads like a red flag. It isn't, it's an artifact of Brier score at extreme imbalance (predicting "never fraud" is right 99.84% of the time), and it was a useful lesson in not trusting a single calibration number without understanding what it's actually sensitive to.
 
 5. **Gradient Checking Is Worth Doing Even When the Math Feels Obvious.**
 
@@ -155,11 +167,11 @@ Before trusting any training run, I verified the analytic gradient against a fin
 
 6. **Interpretability Has a Hard Ceiling Independent of the Model.**
 
-`V1`–`V28` are anonymised PCA components the dataset creators applied PCA before I ever saw the data, specifically to protect cardholder privacy. That means the learned weights can tell me which components the model relies on, but never what those components mean in business terms. No amount of model sophistication recovers that; it's a property of the data, not of logistic regression specifically. 
+`V1`–`V28` are anonymised PCA components the dataset creators applied PCA before I ever saw the data, specifically to protect cardholder privacy. That means the learned weights can tell me which components the model relies on, but never what those components mean in business terms. No amount of model sophistication recovers that; it's a property of the data, not of logistic regression specifically.
 
-7. **Diagnosing "Fundamental" vs. "Threshold" Errors Changes What You Try Next.**
+7. **A Threshold Sweep Can't Prove "Fundamental" Errors — and I Initially Got This Wrong.**
 
-Sweeping recall across every threshold down to τ=0.01 on the test set (purely for diagnostic visualisation, after τ* was already fixed on validation) showed that some fraud cases stay misclassified no matter how permissive the threshold gets. That's the difference between an error you can fix by moving τ and an error that requires a fundamentally different decision boundary, and it's exactly what the benchmark table confirms: Random Forest and XGBoost, both nonlinear, outperform both logistic regression variants on F2 and AUC-PR (0.8333 and 0.8407 vs. 0.7902/0.7973), evidence that a linear model has a real ceiling here and that closing the gap needs a nonlinear model, not more threshold tuning.
+An earlier version of this project swept recall down to τ=0.01 and concluded that some fraud cases were permanently misclassified "regardless of threshold" — treating that as proof of a hard linear-boundary ceiling. That conclusion doesn't hold: since every model's sigmoid output is strictly positive, recall trivially reaches 1.0 at τ→0 for *any* classifier, so a threshold sweep alone can never show an irrecoverable error. The corrected, honest version of the diagnostic asks how *high* τ can go while recall stays at 1.0 (τ≈0.003–0.007 here) and what precision that costs (≈0.002) — a real but narrower finding about the cost of chasing the hardest cases, not about the geometry of the decision boundary. The actual, controlled evidence that nonlinearity helps here is the benchmark table: Random Forest and XGBoost outperform both logistic regression variants on F2 and AUC-PR (0.8333/0.8407 vs. 0.7902 for both LR models) under the identical pipeline and metrics. This was a good lesson in checking whether a diagnostic actually tests the claim it's being used to support, rather than trusting a plausible-sounding narrative around a real number.
 
 8. **Numerical Stability Details Compound Silently.**
 
@@ -169,9 +181,13 @@ Sigmoid clipped to [-500, 500] to prevent overflow, BCE guarded with ε=1e-15 to
 
 Once the from-scratch model was working, I checked it against sklearn's `LogisticRegression` on the same preprocessed data. AUC-ROC and F2 lined up closely (0.9770 vs 0.9783, 0.7902 vs 0.7733), which confirmed the core math was correct. But AUC-PR did not line up (0.5578 vs 0.2897), a genuine, sizeable gap rather than solver noise. Tracing that back to sklearn's default L2 regularisation (which the from-scratch model doesn't implement) was more valuable than the implementation itself, because it's the only way to be confident the from-scratch math is actually correct and to understand *why* a discrepancy exists rather than dismissing it.
 
-10. **What I'd Do Differently**
+10. **A Correctness Pass Can Move the Numbers More Than the Modelling Does.**
 
-Looking back, a few things would have saved time. I'd write the leakage-prevention rules (what gets fit on train-only, what stays unseen until final evaluation) down explicitly before writing any preprocessing code, rather than re-deriving them mid-implementation. I'd also build the calibration diagnostics earlier in the process instead of near the end, discovering that Model A's probabilities were compressed toward the extremes after already comparing both models on threshold behaviour meant re-interpreting earlier conclusions in light of a fact I could have known from the start. I'd also match sklearn's regularisation (or explicitly disable it) from the start, so the benchmark comparison isolates "from-scratch vs. sklearn implementation correctness" instead of quietly also comparing "regularised vs. unregularised."
+Going back through this notebook for bugs after treating it as "done" changed more than cosmetics. Two implementation bugs (a SMOTE target-ratio formula that under-shot its stated goal, and a Precision-Recall-curve convention that understated AUC-PR at the low-recall end) shifted AUC-PR materially — most visibly for Model B (0.4682 → 0.7548) and for every tree-based benchmark (e.g. XGBoost 0.4425 → 0.8354), which flipped the "best model" conclusion from Random Forest to XGBoost. A results-comparison table that silently marked the wrong column as the winner, and a Brier-score interpretation that asserted a conclusion the printed numbers didn't support, were both bugs I would have shipped past without a dedicated correctness review. The lesson: re-reading code for logic is not the same activity as re-checking whether the printed narrative actually follows from the printed numbers.
+
+11. **What I'd Do Differently**
+
+Looking back, a few things would have saved time. I'd write the leakage-prevention rules (what gets fit on train-only, what stays unseen until final evaluation) down explicitly before writing any preprocessing code, rather than re-deriving them mid-implementation. I'd also build the calibration diagnostics earlier in the process instead of near the end, discovering that Model A's probabilities were compressed toward the extremes after already comparing both models on threshold behaviour meant re-interpreting earlier conclusions in light of a fact I could have known from the start. I'd also match sklearn's regularisation (or explicitly disable it) from the start, so the benchmark comparison isolates "from-scratch vs. sklearn implementation correctness" instead of quietly also comparing "regularised vs. unregularised." And I'd treat every printed "conclusion" sentence as a claim to verify against its own numbers before considering a notebook finished, not just the code that produced the numbers.
 
 ---
 
