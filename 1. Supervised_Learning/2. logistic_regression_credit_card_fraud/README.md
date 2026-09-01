@@ -177,7 +177,7 @@ An earlier version of this project swept recall down to τ=0.01 and concluded th
 
 Sigmoid clipped to [-500, 500] to prevent overflow, BCE guarded with ε=1e-15 to prevent log(0), Z-score normalisation guarded with ε=1e-8 to prevent division by zero. Each of these felt like a minor detail in isolation, but skipping any one of them would have produced NaNs or silently wrong gradients somewhere downstream, likely long after the point where the actual bug was introduced.
 
-9. **Benchmarking Against sklearn Is the Real Validation — And It Surfaced a Real Discrepancy.**
+9. **Benchmarking Against sklearn Is the Real Validation, And It Surfaced a Real Discrepancy.**
 
 Once the from-scratch model was working, I checked it against sklearn's `LogisticRegression` on the same preprocessed data. AUC-ROC and F2 lined up closely (0.9770 vs 0.9783, 0.7902 vs 0.7733), which confirmed the core math was correct. But AUC-PR did not line up (0.5578 vs 0.2897), a genuine, sizeable gap rather than solver noise. Tracing that back to sklearn's default L2 regularisation (which the from-scratch model doesn't implement) was more valuable than the implementation itself, because it's the only way to be confident the from-scratch math is actually correct and to understand *why* a discrepancy exists rather than dismissing it.
 
