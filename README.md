@@ -16,7 +16,9 @@ Each project follows the full ML pipeline: exploratory data analysis, feature en
 | 03 | [Decision Tree](./1.%20Supervised_Learning/3.%20decision_tree_breast_cancer/) | CART (Gini Impurity) | Breast Cancer Wisconsin | Complete |
 | 04 | [Random Forest](./1.%20Supervised_Learning/4.%20random_forest_titanic_survival/) | Bagging + Random Feature Subsampling | Titanic Survival | Complete |
 | 05 | [Gradient Boosting](./1.%20Supervised_Learning/5.%20gradient_boosting_adult_census_income/) | Functional Gradient Descent (Boosting) | Adult Census Income | Complete |
-
+| 06 | [K-Nearest Neighbors](./1.%20Supervised_Learning/6.%20KNN_iris_flower/) | Brute-Force Distance Search (Majority Vote) | Iris Flower | Complete |
+| 07 | [Naive Bayes](./1.%20Supervised_Learning/7.%20naive_bayes_newsgroups/) | Multinomial Naive Bayes (Bayes' Theorem) | 20 Newsgroups | Complete |
+| 08 | [Support Vector Machine](./1.%20Supervised_Learning/8.%20SVM_breast_cancer/) | Soft-Margin Linear SVM (Subgradient Descent) | Breast Cancer Wisconsin | Complete |
 
 ---
 
