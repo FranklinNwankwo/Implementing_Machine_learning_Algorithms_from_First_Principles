@@ -39,7 +39,7 @@ Key issues encountered and resolved during the project:
 ## Repository Structure
 
 ```
-<8>. SVM_breast_cancer
+8. SVM_breast_cancer
 ├── data/
 │   └── .gitk
 ├── notebook/
