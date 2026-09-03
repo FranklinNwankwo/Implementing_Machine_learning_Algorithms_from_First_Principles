@@ -19,7 +19,7 @@ Each project follows the full ML pipeline: exploratory data analysis, feature en
 | 06 | [K-Nearest Neighbors](./1.%20Supervised_Learning/6.%20KNN_iris_flower/) | Brute-Force Distance Search (Majority Vote) | Iris Flower | Complete |
 | 07 | [Naive Bayes](./1.%20Supervised_Learning/7.%20naive_bayes_newsgroups/) | Multinomial Naive Bayes (Bayes' Theorem) | 20 Newsgroups | Complete |
 | 08 | [Support Vector Machine](./1.%20Supervised_Learning/8.%20SVM_breast_cancer/) | Soft-Margin Linear SVM (Subgradient Descent) | Breast Cancer Wisconsin | Complete |
-
+| 09 | [Linear Discriminant Analysis](./1.%20Supervised_Learning/9.%20LDA_imdb_sentiment_analysis/) | Fisher's Criterion (Ridge-Regularised Pooled Covariance) | IMDb Movie Reviews | Complete |
 ---
 
 ## Structure
