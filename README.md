@@ -10,15 +10,15 @@ Each project follows the full ML pipeline: exploratory data analysis, feature en
 
 | # | Project | Algorithm | Dataset | Status |
 |---|---|---|---|---|
-| 01 | [Linear Regression](./1.%20Supervised_Learning/1.%20linear-regression_california_housing/) | OLS / Gradient Descent | California Housing | Complete |
-| 02 | [Logistic Regression](./1.%20Supervised_Learning/2.%20logistic_regression_credit_card_fraud/) | Gradient Descent (Weighted BCE / SMOTE) | Credit Card Fraud Detection | Complete |
-| 03 | [Decision Tree](./1.%20Supervised_Learning/3.%20decision_tree_breast_cancer/) | CART (Gini Impurity) | Breast Cancer Wisconsin | Complete |
-| 04 | [Random Forest](./1.%20Supervised_Learning/4.%20random_forest_titanic_survival/) | Bagging + Random Feature Subsampling | Titanic Survival | Complete |
-| 05 | [Gradient Boosting](./1.%20Supervised_Learning/5.%20gradient_boosting_adult_census_income/) | Functional Gradient Descent (Boosting) | Adult Census Income | Complete |
-| 06 | [K-Nearest Neighbors](./1.%20Supervised_Learning/6.%20KNN_iris_flower/) | Brute-Force Distance Search (Majority Vote) | Iris Flower | Complete |
-| 07 | [Naive Bayes](./1.%20Supervised_Learning/7.%20naive_bayes_newsgroups/) | Multinomial Naive Bayes (Bayes' Theorem) | 20 Newsgroups | Complete |
-| 08 | [Support Vector Machine](./1.%20Supervised_Learning/8.%20SVM_breast_cancer/) | Soft-Margin Linear SVM (Subgradient Descent) | Breast Cancer Wisconsin | Complete |
-| 09 | [Linear Discriminant Analysis](./1.%20Supervised_Learning/9.%20LDA_imdb_movie/) | Fisher's Criterion (Ridge-Regularised Pooled Covariance) | IMDb Movie Reviews | Complete |
+| 01 | [Linear Regression](./1.%20Supervised_Learning/01.%20linear-regression_california_housing/) | OLS / Gradient Descent | California Housing | Complete |
+| 02 | [Logistic Regression](./1.%20Supervised_Learning/02.%20logistic_regression_credit_card_fraud/) | Gradient Descent (Weighted BCE / SMOTE) | Credit Card Fraud Detection | Complete |
+| 03 | [Decision Tree](./1.%20Supervised_Learning/03.%20decision_tree_breast_cancer/) | CART (Gini Impurity) | Breast Cancer Wisconsin | Complete |
+| 04 | [Random Forest](./1.%20Supervised_Learning/04.%20random_forest_titanic_survival/) | Bagging + Random Feature Subsampling | Titanic Survival | Complete |
+| 05 | [Gradient Boosting](./1.%20Supervised_Learning/05.%20gradient_boosting_adult_census_income/) | Functional Gradient Descent (Boosting) | Adult Census Income | Complete |
+| 06 | [K-Nearest Neighbors](./1.%20Supervised_Learning/06.%20KNN_iris_flower/) | Brute-Force Distance Search (Majority Vote) | Iris Flower | Complete |
+| 07 | [Naive Bayes](./1.%20Supervised_Learning/07.%20naive_bayes_newsgroups/) | Multinomial Naive Bayes (Bayes' Theorem) | 20 Newsgroups | Complete |
+| 08 | [Support Vector Machine](./1.%20Supervised_Learning/08.%20SVM_breast_cancer/) | Soft-Margin Linear SVM (Subgradient Descent) | Breast Cancer Wisconsin | Complete |
+| 09 | [Linear Discriminant Analysis](./1.%20Supervised_Learning/09.%20LDA_imdb_movie/) | Fisher's Criterion (Ridge-Regularised Pooled Covariance) | IMDb Movie Reviews | Complete |
 | 10 | [Multilayer Perceptron](./1.%20Supervised_Learning/10.%20MLP_MNIST/) | Backpropagation (Mini-Batch Gradient Descent) | MNIST Handwritten Digits | Complete |
 
 
