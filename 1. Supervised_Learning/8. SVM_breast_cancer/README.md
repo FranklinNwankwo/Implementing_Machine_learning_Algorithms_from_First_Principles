@@ -58,7 +58,7 @@ Key issues encountered and resolved during the project:
 
 ```bash
 git clone https://github.com/FranklinNwankwo/Implementing_Machine_learning_Algorithms_from_First_Principles.git
-cd "Implementing_Machine_learning_Algorithms_from_First_Principles/1. Supervised_Learning/8. SVM_breast_cancer_wisconsin"
+cd "Implementing_Machine_learning_Algorithms_from_First_Principles/1. Supervised_Learning/8. SVM_breast_cancer"
 ```
 
 ### 2. Create and activate a virtual environment (recommended)

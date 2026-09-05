@@ -37,7 +37,7 @@ Key issues encountered and resolved during the project:
 ├── data/
 │ └── .gitkeep
 ├── notebook/
-│ └── Logistic_Regression_from_scratch.ipynb
+│ └── Logistic_Regression_Credit_Card_Dataset.ipynb
 ├── README.md
 └── requirements.txt
 ```

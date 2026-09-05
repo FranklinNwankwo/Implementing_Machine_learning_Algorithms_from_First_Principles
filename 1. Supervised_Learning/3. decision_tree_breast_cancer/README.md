@@ -35,7 +35,7 @@ Key issues encountered and resolved during the project:
 ├── data/
 │   └── .gitkeep
 ├── notebook/
-│   └── Decision_tree__Breast_cancer_dataset__from_scratch.ipynb
+│   └── Decision_tree_(Breast_cancer_dataset).ipynb
 ├── README.md
 └── requirements.txt
 ```

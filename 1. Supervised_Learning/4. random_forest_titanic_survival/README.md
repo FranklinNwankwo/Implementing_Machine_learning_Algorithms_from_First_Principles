@@ -37,7 +37,7 @@ Key issues encountered and resolved during the project:
 ## Repository Structure
 
 ```
-4. random_forest/
+4. random_forest_titanic_survival/
 ├── data/
 │   └── .gitkeep
 ├── notebook/
