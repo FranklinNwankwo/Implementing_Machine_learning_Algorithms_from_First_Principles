@@ -41,7 +41,7 @@ Key issues encountered and resolved during the project:
 ## Repository Structure
 
 ```
-7. naive_bayes_newsgroups/
+07. naive_bayes_newsgroups/
 ├── data/
 │   └── .gitkeep
 ├── notebook/
@@ -60,7 +60,7 @@ Key issues encountered and resolved during the project:
 
 ```bash
 git clone https://github.com/FranklinNwankwo/Implementing_Machine_learning_Algorithms_from_First_Principles.git
-cd "Implementing_Machine_learning_Algorithms_from_First_Principles/1. Supervised_Learning/7. naive_bayes_newsgroups"
+cd "Implementing_Machine_learning_Algorithms_from_First_Principles/1. Supervised_Learning/07. naive_bayes_newsgroups"
 ```
 
 ### 2. Create and activate a virtual environment (recommended)

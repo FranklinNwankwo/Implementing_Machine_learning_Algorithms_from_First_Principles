@@ -39,7 +39,7 @@ Key issues encountered and resolved during the project:
 ## Repository Structure
 
 ```
-9. LDA_imdb_movie/
+09. LDA_imdb_movie/
 ├── data/
 │   └── .gitkeep
 ├── notebook/
@@ -58,7 +58,7 @@ Key issues encountered and resolved during the project:
 
 ```bash
 git clone https://github.com/FranklinNwankwo/Implementing_Machine_learning_Algorithms_from_First_Principles.git
-cd "Implementing_Machine_learning_Algorithms_from_First_Principles/1. Supervised_Learning/9. LDA_imdb_movie"
+cd "Implementing_Machine_learning_Algorithms_from_First_Principles/1. Supervised_Learning/09. LDA_imdb_movie"
 ```
 
 ### 2. Create and activate a virtual environment (recommended)

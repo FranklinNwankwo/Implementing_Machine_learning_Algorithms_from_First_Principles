@@ -37,7 +37,7 @@ Key issues encountered and resolved during the project:
 ## Repository Structure
 
 ```
-6. KNN_iris_flower/
+06. KNN_iris_flower/
 ├── data/
 │   └── .gitkeep
 ├── notebook/
@@ -56,7 +56,7 @@ Key issues encountered and resolved during the project:
 
 ```bash
 git clone https://github.com/FranklinNwankwo/Implementing_Machine_learning_Algorithms_from_First_Principles.git
-cd "Implementing_Machine_learning_Algorithms_from_First_Principles/1. Supervised_Learning/6. KNN_iris_flower"
+cd "Implementing_Machine_learning_Algorithms_from_First_Principles/1. Supervised_Learning/06. KNN_iris_flower"
 ```
 
 ### 2. Create and activate a virtual environment (recommended)

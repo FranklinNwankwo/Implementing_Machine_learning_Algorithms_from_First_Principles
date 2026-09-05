@@ -33,7 +33,7 @@ Key issues encountered and resolved during the project:
 ## Repository Structure
 
 ```
-2. logistic_regression_credit_card_fraud/
+02. logistic_regression_credit_card_fraud/
 ├── data/
 │ └── .gitkeep
 ├── notebook/
@@ -53,7 +53,7 @@ Key issues encountered and resolved during the project:
 
 ```bash
 git clone https://github.com/FranklinNwankwo/Implementing_Machine_learning_Algorithms_from_First_Principles.git
-cd "Implementing_Machine_learning_Algorithms_from_First_Principles/1. Supervised_Learning/2. logistic_regression_credit_card_fraud"
+cd "Implementing_Machine_learning_Algorithms_from_First_Principles/1. Supervised_Learning/02. logistic_regression_credit_card_fraud"
 ```
 
 ### 2. Create and activate a virtual environment (recommended)

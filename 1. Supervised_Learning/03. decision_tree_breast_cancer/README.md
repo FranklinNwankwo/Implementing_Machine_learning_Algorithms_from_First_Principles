@@ -31,7 +31,7 @@ Key issues encountered and resolved during the project:
 ## Repository Structure
 
 ```
-3. decision_tree_breast_cancer/
+03. decision_tree_breast_cancer/
 ├── data/
 │   └── .gitkeep
 ├── notebook/
@@ -50,7 +50,7 @@ Key issues encountered and resolved during the project:
 
 ```bash
 git clone https://github.com/FranklinNwankwo/Implementing_Machine_learning_Algorithms_from_First_Principles.git
-cd "Implementing_Machine_learning_Algorithms_from_First_Principles/1. Supervised_Learning/3. decision_tree_breast_cancer"
+cd "Implementing_Machine_learning_Algorithms_from_First_Principles/1. Supervised_Learning/03. decision_tree_breast_cancer"
 ```
 
 ### 2. Create and activate a virtual environment (recommended)
