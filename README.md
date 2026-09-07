@@ -67,5 +67,5 @@ jupyter notebook notebook/
 
 ## Author
 
-**Franklin Nwankwo**  
+**Chinonso Franklin Nwankwo**  
 [LinkedIn](https://www.linkedin.com/in/chinonso-nwankwo/)
