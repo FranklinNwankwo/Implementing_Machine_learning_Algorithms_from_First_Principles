@@ -26,7 +26,7 @@ Each project follows the full ML pipeline: exploratory data analysis, feature en
 
 | # | Project | Algorithm | Dataset | Status |
 |---|---|---|---|---|
-| 1 | [K-Means Clustering](./2.%20Unsupervised_Learning/1.%20K-Means_iris_flower/) | Custom Centroid Assignment & Update (Lloyd's Algorithm) | Iris Flower Dataset | Complete |
+| 1 | [K-Means Clustering](./2.%20Unsupervised_Learning/1.%20K-Means_Iris_flower/) | Custom Centroid Assignment & Update (Lloyd's Algorithm) | Iris Flower Dataset | Complete |
 
 
 ## REINFORCEMENT LEARNING
