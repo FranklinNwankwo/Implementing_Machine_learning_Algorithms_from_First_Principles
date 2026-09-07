@@ -160,4 +160,4 @@ Comparing the scratch tree's Gini-reduction-based feature importances against Ra
 ## Author
 
 **Chinonso Franklin Nwankwo**  
-[LinkedIn](https://www.linkedin.com/in/franklin-nwankwo-499736383/)
+[LinkedIn](https://www.linkedin.com/in/chinonso-nwankwo/)

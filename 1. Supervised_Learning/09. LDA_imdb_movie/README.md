@@ -212,4 +212,4 @@ Because $w = \Sigma^{-1}(\mu_1 - \mu_0)$ passes the raw class-mean difference th
 ## Author
 
 **Chinonso Franklin Nwankwo**
-[LinkedIn](https://www.linkedin.com/in/franklin-nwankwo-499736383/)
+[LinkedIn](https://www.linkedin.com/in/chinonso-nwankwo/)

@@ -181,4 +181,4 @@ Comparing the custom Random Forest against sklearn's implementation with matched
 ## Author
 
 **Chinonso Franklin Nwankwo**  
-[LinkedIn](https://www.linkedin.com/in/franklin-nwankwo-499736383/)
+[LinkedIn](https://www.linkedin.com/in/chinonso-nwankwo/)

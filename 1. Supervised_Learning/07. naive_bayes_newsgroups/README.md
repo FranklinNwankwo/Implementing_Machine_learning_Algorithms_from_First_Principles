@@ -225,4 +225,4 @@ The leakage ablation was originally run partly to confirm that the `ax` token ar
 ## Author
 
 **Chinonso Franklin Nwankwo**
-[LinkedIn](https://www.linkedin.com/in/franklin-nwankwo-499736383/)
+[LinkedIn](https://www.linkedin.com/in/chinonso-nwankwo/)

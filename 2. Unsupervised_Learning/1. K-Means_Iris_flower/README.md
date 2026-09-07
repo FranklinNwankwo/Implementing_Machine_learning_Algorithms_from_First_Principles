@@ -257,4 +257,4 @@ Writing `_handle_empty_clusters` to re-seed any centroid that receives zero assi
 ## Author
 
 **Chinonso Franklin Nwankwo**
-[LinkedIn](https://www.linkedin.com/in/franklin-nwankwo-499736383/)
+[LinkedIn](https://www.linkedin.com/in/chinonso-nwankwo/)

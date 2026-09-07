@@ -181,4 +181,4 @@ Document assumptions as I go: Several bugs were rooted in me forgetting an assum
 ## Author
 
 **Chinonso Franklin Nwankwo**  
-[LinkedIn](https://www.linkedin.com/in/franklin-nwankwo-499736383/)
+[LinkedIn](https://www.linkedin.com/in/chinonso-nwankwo/)

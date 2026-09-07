@@ -242,4 +242,4 @@ Small `C` (heavy regularization, wide margin) sounds like the conservative choic
 ## Author
 
 **Chinonso Franklin Nwankwo**
-[LinkedIn](https://www.linkedin.com/in/franklin-nwankwo-499736383/)
+[LinkedIn](https://www.linkedin.com/in/chinonso-nwankwo/)

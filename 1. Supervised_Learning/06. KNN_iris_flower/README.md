@@ -181,4 +181,4 @@ Timing the same prediction across training set sizes from 120 to 10,000 and watc
 ## Author
 
 **Chinonso Franklin Nwankwo**
-[LinkedIn](https://www.linkedin.com/in/franklin-nwankwo-499736383/)
+[LinkedIn](https://www.linkedin.com/in/chinonso-nwankwo/)

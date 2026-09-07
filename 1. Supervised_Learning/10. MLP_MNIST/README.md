@@ -230,4 +230,4 @@ Overall max relative error `7.39e-09`, mean `2.62e-10` — every parameter matri
 ## Author
 
 **Chinonso Franklin Nwankwo**
-[LinkedIn](https://www.linkedin.com/in/franklin-nwankwo-499736383/)
+[LinkedIn](https://www.linkedin.com/in/chinonso-nwankwo/)
