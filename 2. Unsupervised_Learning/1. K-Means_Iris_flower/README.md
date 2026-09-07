@@ -1,54 +1,59 @@
-# Linear Discriminant Analysis from Scratch — IMDb Sentiment Analysis
+# K-Means Clustering from Scratch — Iris Species Discovery
 
-An end-to-end machine learning project implementing Linear Discriminant Analysis using only NumPy, applied to binary sentiment classification on the [IMDb Movie Review dataset](https://huggingface.co/datasets/stanfordnlp/imdb) (50,000 reviews).
+An end-to-end machine learning project implementing K-Means clustering using only NumPy, applied to unsupervised species discovery on the [Iris Flower Dataset](https://scikit-learn.org/stable/datasets/toy_dataset.html#iris-plants-dataset) (150 observations, 4 numerical features, 3 known species).
 
-Built to understand LDA's full mathematical machinery, class means, scatter matrices, Fisher's criterion, pooled covariance, regularised inversion, with no reliance on `sklearn.discriminant_analysis` until the custom implementation was fully derived and validated.
+Built to understand Lloyd's algorithm's full mechanics; centroid initialization, vectorised distance computation, cluster assignment, centroid recomputation, empty-cluster recovery, and convergence detection, with no reliance on `sklearn.cluster.KMeans` for the primary clustering result. Scikit-learn is used only afterward, as an independent benchmark and to run alternative clustering algorithms for comparison.
 
 ---
 
 ## Project Overview
 
-Unlike a lazy learner like KNN, LDA estimates explicit parameters at fit time, per-class means, a pooled within-class covariance, and the discriminant weights derived from it, then classifies new points with a single matrix-vector multiplication. This project implements that idea from first principles:
+Given flower measurements *without* their species labels, can K-Means discover meaningful groups based solely on four numerical features? This project implements that idea from first principles:
 
-1. **Mathematical Derivation** — class means, within-class scatter $\mathbf{S}_W$, between-class scatter $\mathbf{S}_B$, and Fisher's criterion, worked out in full before any code is written
-2. **From-Scratch Implementation** — a `CustomLDA` class (NumPy only) estimating class priors, means, and pooled covariance; Cholesky-based inversion with a `pinv` fallback; precomputed discriminant coefficients $w_k = \Sigma^{-1}\mu_k$; a numerically stable log-sum-exp softmax for `predict_proba()`
-3. **Ridge Regularisation** — a tunable $\alpha$ added to $\mathbf{S}_W$ before inversion, required because high-dimensional TF-IDF features make the scatter matrix rank-deficient
-4. **Text Feature Engineering** — a cleaning pipeline (HTML/punctuation stripping, stopword removal) feeding both TF-IDF (unigrams + bigrams, sublinear TF) and Bag-of-Words vectorisers, fit on the training split only
+1. **Mathematical Derivation** — the within-cluster sum of squared distances objective $J$, worked out before any code is written
+2. **From-Scratch Implementation** — a `KMeansFromScratch` class (NumPy only) mirroring sklearn's estimator API (`fit`/`predict`), with random-observation centroid initialization, a single vectorised broadcast distance calculation, `argmin`-based cluster assignment, mean-based centroid updates, explicit empty-cluster recovery, and inertia tracking
+3. **Unsupervised K Selection** — the elbow method and silhouette analysis across $K = 2, \dots, 10$, evaluated without touching the species labels
+4. **Rigorous, Permutation-Aware Evaluation** — because cluster IDs are arbitrary, comparison against ground truth requires solving the label-permutation problem via the Hungarian algorithm before reporting a "mapped accuracy," alongside permutation-invariant metrics (ARI, NMI).
 
-This project walks through the full supervised learning pipeline:
+This project walks through the full unsupervised learning pipeline:
 
-- **Exploratory Data Analysis (EDA)** — class balance, review-length distributions by class, distinctive-word frequency analysis, vocabulary growth (Heaps' Law), and measured TF-IDF sparsity across candidate vocabulary sizes
-- **Preprocessing** — HTML/punctuation/stopword-stripping text cleaner, a 70/15/15 stratified train/validation/test split, and a TF-IDF vectoriser (`max_features=2000`, `min_df=3`, `sublinear_tf=True`, unigrams+bigrams) fit on the training split only
-- **Model Implementation** — a `CustomLDA` class (ridge-regularised pooled covariance, Cholesky solve, softmax posterior) built from scratch with NumPy
-- **Hyperparameter Sensitivity Analysis** — a regularisation ($\alpha$) sweep from $10^{-6}$ to $1.0$ evaluated on the validation set
-- **Validation** — matched comparison against `sklearn.discriminant_analysis.LinearDiscriminantAnalysis` (`solver='lsqr'`, `shrinkage='auto'`), including a full prediction-agreement check
-- **Dimensionality Reduction Experiment** — PCA (50–200 components) as a preprocessing step to produce a full-rank scatter matrix without regularisation
-- **Comparative Modeling** — benchmarked against Sklearn LDA, Logistic Regression, Linear SVM, Bernoulli Naive Bayes, Random Forest, and Gradient Boosting
-- **Assumption Analysis** — an explicit, honest check of LDA's three core assumptions (Gaussian class-conditionals, shared covariance, feature independence) against TF-IDF's actual distribution
-- **Diagnostics** — 5-fold stratified cross-validation (with the vectoriser refit inside each fold), false-positive/false-negative inspection with confidence scores, a prediction-confidence and calibration (reliability diagram) analysis, and LDA's discriminant weights as a feature-importance/interpretability tool
+- **Exploratory Data Analysis (EDA)** — feature distributions by species, boxplots, pairwise relationships, and a correlation heatmap, with species used strictly for visual interpretation, never as a model input
+- **Feature Scaling** — a manual z-score standardisation function, applied to test whether removing the scale disparity between petal and sepal measurements changes clustering quality
+- **Model Implementation** — a `KMeansFromScratch` class (vectorised Euclidean distance, empty-cluster re-seeding, convergence via centroid-movement tolerance) built from scratch with NumPy
+- **K Selection** — elbow (inertia) and silhouette diagnostics across candidate $K$, computed only on standardised features
+- **Initialization Stability Analysis** — the final model configuration re-fit across 30 independent random seeds to quantify how much the result depends on initialization luck versus genuine data structure
+- **Validation** — matched comparison against `sklearn.cluster.KMeans` (`init="random"`, `n_init=1`, same seed), isolating the comparison to whether the two Lloyd's-algorithm implementations agree
+- **Comparative Modeling** — benchmarked against Agglomerative (Ward) Clustering, a Gaussian Mixture Model, and DBSCAN (with an `eps` sweep), each encoding different assumptions about cluster shape or density
+- **External Evaluation** — Adjusted Rand Index, Normalized Mutual Information, and Hungarian-algorithm-mapped cluster accuracy against the withheld species labels, plus a contingency table
+- **Diagnostics** — convergence trace inspection, PCA-projected cluster visualisation, and an explicit statement of K-Means's modeling assumptions checked against the evidence gathered
 
 Key issues encountered and resolved during the project:
 
-- **Cross-validation would have leaked information through the vectoriser** — pooling the already-vectorised TF-IDF matrices across folds would have reused a vocabulary/IDF fit on the original 70% training split for every fold; instead, Section 13 refits the `TfidfVectorizer` from raw cleaned text inside each fold independently
-- **A second, distinct duplication source after text cleaning** — the raw `review`/`sentiment` pair was deduplicated first (418 rows dropped), but cleaning (HTML/punctuation/stopword removal) can make two originally different reviews collapse into the same `clean_review` string; the notebook re-checks duplicates against `clean_review` and drops those separately (49,582 → 49,574 rows) rather than assuming the first dedup pass caught everything
-- **PCA preprocessing was tested, not assumed to help** — Section 10 ran regularised direct LDA against PCA+LDA at `n_components ∈ {50,100,150,200}`; even at 200 components (26.5% variance explained), PCA+LDA's test accuracy (0.8602) did not surpass regularised direct LDA (0.8697), so the direct, regularised approach was kept as the primary model rather than defaulting to PCA on the theoretical argument that it produces a "cleaner" full-rank solution
-- **The Gaussian assumption is violated and the notebook says so directly** — TF-IDF features are bounded, sparse, and right-skewed, a clear violation of LDA's normality assumption; rather than glossing over this, Section 8 states the consequence explicitly (a suboptimal discriminant relative to non-Gaussian-assuming models) and treats LDA's competitive results as an example of robustness to assumption violations at large sample size, not evidence the assumption doesn't matter
+- **Inertia is not comparable across unscaled vs. scaled runs** — unscaled inertia is in squared centimetres, scaled inertia is in squared standard-deviation units, so a lower raw number on one side does not mean tighter clusters; silhouette score and ARI (both unit-free) were used instead to judge whether standardisation actually helped
+
+- **Silhouette evidence and biological prior knowledge disagreed on $K$** — because *versicolor* and *virginica* overlap substantially, the silhouette curve often favoured $K=2$ over $K=3$; rather than picking whichever $K$ matched the three known species and calling it "unsupervised evidence," the notebook reports this tension honestly and keeps $K=3$ for external-evaluation purposes while stating plainly that silhouette alone does not uniquely mandate it
+
+- **Comparing cluster labels directly is invalid** — cluster IDs are arbitrary (the custom model's "cluster 0" need not correspond to sklearn's "cluster 0"), so `compute_mapped_accuracy` solves the optimal cluster-to-species assignment via `scipy.optimize.linear_sum_assignment` (the Hungarian algorithm) before any accuracy-style number is reported
+
+- **A matched sklearn seed does not guarantee matched initial centroids** — passing the same `random_state` to both implementations isolates whether the *algorithms* agree, not whether they draw identical starting points, since sklearn's internal sampling procedure differs from the custom implementation's; the resulting cluster-size divergence between the two runs is expected, not a bug
+
+- **DBSCAN needed a real `eps` sweep, not a single guess** — a sweep from `eps=0.3` to `1.2` was run and scored by silhouette (on non-noise points) before selecting `eps=1.1`, which collapses *versicolor* and *virginica* into a single density-connected region rather than resolving three clusters, a genuinely different failure mode from K-Means's own struggle at that same boundary
 
 ---
 
 ## Repository Structure
 
 ```
-9. LDA_imdb_movie/
+1. K-Means_Iris_flower/
 ├── data/
 │   └── .gitkeep
 ├── notebook/
-│   └── LDA_IMDb_Sentiment_Analysis.ipynb
+│   └── KMeans_Clustering.ipynb
 ├── README.md
 └── requirements.txt
 ```
 
-> **Note on data:** The dataset is not committed to this repo. It is loaded directly from Hugging Face's `datasets` hub (`stanfordnlp/imdb`) inside the notebook, so no manual download is needed.
+> **Note on data:** The dataset is not committed to this repo. It is loaded directly via `sklearn.datasets.load_iris()` inside the notebook, so no manual download is needed.
 
 ---
 
@@ -58,7 +63,7 @@ Key issues encountered and resolved during the project:
 
 ```bash
 git clone https://github.com/FranklinNwankwo/Implementing_Machine_learning_Algorithms_from_First_Principles.git
-cd "Implementing_Machine_learning_Algorithms_from_First_Principles/1. Supervised_Learning/9. LDA_imdb_sentiment_analysis"
+cd "Implementing_Machine_learning_Algorithms_from_First_Principles/2. Unsupervised_Learning/1. K-Means_Iris_flower"
 ```
 
 ### 2. Create and activate a virtual environment (recommended)
@@ -88,13 +93,12 @@ See `requirements.txt`. Core libraries used:
 
 | Library | Purpose |
 |---|---|
-| `numpy` | Class means, scatter matrices, Cholesky inversion, discriminant scoring, softmax |
-| `pandas` | Data manipulation, structural audit, EDA |
-| `matplotlib` | Visualizations |
-| `seaborn` | Confusion matrix heatmap |
-| `datasets` (Hugging Face) | IMDb dataset loader |
-| `nltk` | English stopword list |
-| `scikit-learn` | TF-IDF/BoW vectorisation, `train_test_split`, `StratifiedKFold`, PCA, validation-phase benchmark models, evaluation metrics |
+| `numpy` | Centroid initialisation, vectorised distance computation, cluster assignment, centroid updates, inertia calculation |
+| `pandas` | Data manipulation, structural audit, EDA, results tables |
+| `matplotlib` | Visualisations |
+| `seaborn` | Distribution plots, boxplots, pairplots, correlation heatmap |
+| `scikit-learn` | `load_iris`, `KMeans` (benchmark), `AgglomerativeClustering`, `DBSCAN`, `GaussianMixture`, `PCA`, silhouette/ARI/NMI metrics |
+| `scipy` | `linear_sum_assignment` (Hungarian algorithm) for permutation-aware mapped accuracy |
 
 ---
 
@@ -102,110 +106,151 @@ See `requirements.txt`. Core libraries used:
 
 | Hyperparameter | Value |
 |---|---|
-| `alpha` (ridge regularisation) | 1e-4 |
-| Feature representation | TF-IDF (unigrams + bigrams, `max_features=2000`, `min_df=3`, `sublinear_tf=True`) |
+| `n_clusters` (K) | 3 |
+| `init` | `random` (K distinct observations drawn from the dataset) |
+| `max_iter` | 300 |
+| `tol` | 1e-4 |
+| Feature representation | Z-score standardised (`sepal_length`, `sepal_width`, `petal_length`, `petal_width`) |
+| `random_state` | 42 |
 
-Selected via a validation-set sweep over $\alpha \in \{10^{-6}, 10^{-5}, 10^{-4}, 10^{-3}, 10^{-2}, 0.1, 1.0\}$ (best validation accuracy = 0.8744), not via test-set performance.
+$K=3$ was selected to align with the three known species for external evaluation; the unsupervised elbow/silhouette evidence across $K=2,\dots,10$ did not unambiguously prefer $K=3$ over $K=2$ (see Results).
 
 ---
 
 ## Limitations
 
-- **LDA's Gaussian assumption is violated by construction**: TF-IDF features are bounded in [0, 1], sparse (a spike at zero), and right-skewed for non-zero values. LDA remains competitive in practice because it is robust to this violation at large sample sizes with genuinely discriminative features, not because the assumption holds.
-- **Ridge regularisation, not covariance shrinkage, is used**: a fixed $\alpha$ tuned by validation-set sweep is simpler than Scikit-Learn's data-adaptive Ledoit-Wolf shrinkage (`shrinkage='auto'`), and accounts for most of the accuracy gap to Sklearn's implementation (0.8697 vs. 0.8728).
-- **Dense arrays are required**: the from-scratch NumPy implementation needs dense matrix arithmetic, which is feasible at a capped vocabulary of 2,000 features (96.7% sparse) but would not scale to the full unconstrained vocabulary without sparse-aware linear algebra.
-- **PCA preprocessing was tested and did not outperform direct regularised LDA**: at the largest tested `n_components` (200, 26.5% variance explained), PCA+LDA reached 0.8602 test accuracy versus 0.8697 for direct LDA — useful for illustrating the rank-deficiency/full-rank trade-off, but not adopted as the primary model.
-- **Predicted probabilities are not well calibrated**: LDA's softmax-derived probabilities amplify discriminant score differences non-linearly; the reliability diagram in Section 14 should be consulted before using raw `predict_proba()` output as a calibrated confidence score in production (Platt scaling or isotonic regression would be needed).
-- **Negation and mixed-sentiment language remain hard**: error analysis shows false negatives concentrated in reviews with negated positive phrasing (e.g. "not bad at all") and false positives concentrated in mixed or sarcastic reviews — LDA's linear boundary cannot model this non-linear interaction, and bigrams only partially mitigate it.
+- **$K=3$ is a biologically-informed choice, not an unambiguous unsupervised one**: the silhouette curve often scores $K=2$ as well as or better than $K=3$, because *versicolor* and *virginica* are not cleanly separable by geometry alone.
+- **Standardisation did not clearly improve external metrics on this dataset**: the naturally larger-magnitude petal measurements are also the most species-informative ones, so scaling away that advantage traded ARI (0.716 → 0.645) for a small silhouette drop as well; standardisation is kept as the more defensible general-purpose default despite this.
+- **The mean is not a robust statistic**: K-Means assumes outliers are not overwhelmingly distorting the cluster centroid, an assumption untested here since Iris contains essentially no outliers.
+- **Convergence is only to a local optimum**: different random initialisations can converge to different final cluster configurations, quantified in the 30-seed stability experiment.
+- **The permutation problem constrains all label-based comparison**: cluster IDs are arbitrary, so any accuracy-style number requires solving an optimal mapping first (Hungarian algorithm); ARI and NMI remain the more fundamentally sound metrics.
+- **Ground-truth labels are a luxury**: they exist here purely because Iris is a labelled benchmark; genuine unsupervised problems in practice typically lack any external validation signal.
+- **Iris is small and unusually clean**: 150 rows, no missing values, no serious outliers, and perfectly balanced classes. Conclusions about robustness here should not be over-generalised to noisier, larger, or imbalanced production data.
 
 ---
 
 ## Results
 
-**Test set — full model comparison (sorted by test accuracy):**
+**Baseline: unscaled vs. scaled K-Means ($K=3$):**
 
-| Rank | Model | Accuracy | Precision | Recall | F1 | AUC | Train Time |
-|---|---|---|---|---|---|---|---|
-| 1 | Sklearn LDA | 0.8728 | 0.8546 | 0.8995 | 0.8765 | 0.9449 | 19,063.6 ms |
-| 2 | Logistic Regression | 0.8721 | 0.8590 | 0.8915 | 0.8750 | 0.9461 | 2,266.1 ms |
-| 3 | Linear SVM | 0.8715 | 0.8609 | 0.8872 | 0.8738 | 0.9431 | 3,940.3 ms |
-| 4 | **Custom LDA** | **0.8697** | **0.8540** | **0.8931** | **0.8731** | **0.9434** | **3,602.0 ms** |
-| 5 | Naive Bayes (BNB) | 0.8452 | 0.8260 | 0.8762 | 0.8503 | 0.9204 | 636.8 ms |
-| 6 | Random Forest | 0.8399 | 0.8418 | 0.8384 | 0.8401 | 0.9172 | 26,074.5 ms |
-| 7 | Gradient Boosting | 0.8079 | 0.7782 | 0.8631 | 0.8184 | 0.8942 | 617,668.4 ms |
+| Metric | Unscaled | Scaled |
+|---|---|---|
+| Inertia | 78.8557 | 140.9015 |
+| Silhouette Score | 0.5512 | 0.4565 |
+| ARI vs. species | 0.7163 | 0.6451 |
+| Iterations to converge | 11 | 5 |
 
-The custom implementation places 4th of 7 models on test accuracy, within 0.3 points of Sklearn's own LDA and within 0.2 points of Logistic Regression and Linear SVM, while training over 5x faster than Sklearn LDA's adaptive shrinkage solver.
+Inertia is not comparable across the two rows (different units); silhouette and ARI, which are unit-free, show the unscaled run scoring *higher* on both — because the larger-magnitude petal measurements happen to also be the most species-informative features, standardising away that scale advantage did not produce a clear external-metric improvement here.
 
-**Custom vs. Sklearn LDA, matched TF-IDF features (`solver='lsqr'`, `shrinkage='auto'`):**
+**K selection ($K = 2$ through $10$, standardised features):**
 
-| Metric | Custom LDA | Sklearn LDA | Δ |
-|---|---|---|---|
-| Accuracy | 0.8697 | 0.8728 | −0.0031 |
-| Precision | 0.8540 | 0.8546 | −0.0007 |
-| Recall | 0.8931 | 0.8995 | −0.0064 |
-| F1 Score | 0.8731 | 0.8765 | −0.0034 |
-| ROC-AUC | 0.9434 | 0.9449 | −0.0015 |
-| Train Time | 3,602.0 ms | 19,063.6 ms | −15,461.7 ms |
-| Inference Time | 30.9 ms (4.2 µs/sample) | 59.4 ms | −28.5 ms |
+| K | Inertia | Silhouette |
+|---|---|---|
+| 2 | 222.3617 | 0.5818 |
+| **3** | **140.9015** | **0.4565** |
+| 4 | 114.5568 | 0.4151 |
+| 5 | 104.7447 | 0.3965 |
+| 6 | 96.9885 | 0.3744 |
+| 7 | 87.9702 | 0.3793 |
+| 8 | 83.4260 | 0.3740 |
+| 9 | 64.6906 | 0.2967 |
+| 10 | 51.2139 | 0.3207 |
 
-**Prediction agreement: 97.49%** of test samples — both implementations reach the same class assignment for the large majority of the 7,437-sample test set, with the small remaining gap attributable to Sklearn's adaptive Ledoit-Wolf shrinkage versus the notebook's fixed-$\alpha$ ridge regularisation.
+The elbow curve decreases smoothly with no single obvious "elbow." $K=2$ scores *higher* on silhouette than $K=3$, a direct consequence of the *versicolor*/*virginica* overlap, so $K=3$ was retained specifically to align with the known species for external evaluation, not because unsupervised evidence alone demanded it.
 
-**5-fold stratified cross-validation** (vectoriser refit independently per fold):
+**Final model ($K=3$, standardised features):**
 
-| Metric | Mean ± Std |
+- Converged in **5 iterations**, final inertia **140.9015**
+- Cluster sizes: **46 / 49 / 55**
+- Cluster → species mapping (Hungarian algorithm): cluster 0 → versicolor, cluster 1 → setosa, cluster 2 → virginica
+
+| External Metric | Value |
 |---|---|
-| Accuracy | 0.8799 ± 0.0022 |
-| F1 Score | 0.8821 ± 0.0024 |
-| ROC-AUC | 0.9501 ± 0.0023 |
+| Silhouette Score | 0.4565 |
+| Adjusted Rand Index | 0.6451 |
+| Normalized Mutual Information | 0.6613 |
+| Mapped cluster accuracy | 0.8533 |
 
-The CV mean accuracy runs about 1 point above the single held-out test accuracy (0.8697) — with the vectoriser refit per fold, this reflects normal variance across five different partitions rather than leakage.
+**Contingency table** (cluster assignment vs. true species):
 
-**PCA + LDA experiment** (dimensionality reduction before fitting):
+| Cluster | setosa | versicolor | virginica |
+|---|---|---|---|
+| 0 | 1 | 37 | 8 |
+| 1 | 49 | 0 | 0 |
+| 2 | 0 | 13 | 42 |
 
-| n_components | Accuracy | F1 | AUC | Variance Explained |
-|---|---|---|---|---|
-| 50 | 0.8429 | 0.8476 | 0.9227 | 10.5% |
-| 100 | 0.8538 | 0.8577 | 0.9313 | 16.9% |
-| 150 | 0.8573 | 0.8608 | 0.9340 | 22.2% |
-| 200 | 0.8602 | 0.8638 | 0.9349 | 26.5% |
+*Setosa* is recovered almost perfectly (49/50 in a single cluster). Nearly all misassignments are cross-contamination between *versicolor* and *virginica*.
 
-None of the tested component counts matched direct regularised LDA's 0.8697 test accuracy.
+**Initialization stability (30 independent seeds, $K=3$, standardised):**
 
-**Error analysis:** 570 false positives (avg. confidence 0.7438) and 399 false negatives (avg. confidence 0.7156) out of 7,437 test samples. Correct predictions cluster at high confidence, while incorrect predictions concentrate near the 0.5 decision boundary, consistent with a well-discriminating (if imperfectly calibrated) classifier.
+| Metric | Mean ± Std | Min | Max |
+|---|---|---|---|
+| Inertia | 145.65 ± 16.15 | 139.82 | 197.47 |
+| Silhouette | 0.4618 ± 0.0086 | 0.4565 | 0.4951 |
+| ARI | 0.6053 ± 0.0588 | 0.4328 | 0.6451 |
+| Mapped Accuracy | 0.8107 ± 0.0800 | 0.5800 | 0.8533 |
 
-**Data pipeline:** 50,000 raw reviews → 49,582 after removing 418 exact duplicate (review, sentiment) pairs → 49,574 after removing rows that collided post-cleaning → split 70/15/15 into 34,701 train / 7,436 validation / 7,437 test samples, each stratified to ~50.2% positive.
+Most seeds cluster tightly near the best-known solution, but the minimum-inertia outlier (197.47 vs. a median of ~140.5) and the accuracy range (0.58–0.85) confirm that a minority of initialisations converge to a genuinely worse local optimum, the concrete motivation for smarter initialisation schemes like K-Means++.
+
+**Custom `KMeansFromScratch` vs. `sklearn.cluster.KMeans`** (matched `init="random"`, `n_init=1`, same seed):
+
+| Metric | Custom KMeansFromScratch | sklearn KMeans |
+|---|---|---|
+| Inertia | 140.9015 | 140.0328 |
+| Iterations | 5 | 6 |
+| Silhouette Score | 0.4565 | 0.4630 |
+| Adjusted Rand Index | 0.6451 | 0.5923 |
+| Normalized Mutual Info | 0.6613 | 0.6427 |
+| Mapped Accuracy | 0.8533 | 0.8133 |
+| Cluster sizes | [46, 49, 55] | [56, 50, 44] |
+
+Absolute inertia difference: **0.87** (out of ~140). Cluster *sizes* diverge more visibly than the quality metrics — expected, since a matched `random_state` does not guarantee both implementations draw the same initial centroids from a different internal sampling procedure.
+
+**Consolidated comparison across algorithms** (standardised features):
+
+| Algorithm | K / Parameters | Clusters Found | Silhouette | ARI | NMI |
+|---|---|---|---|---|---|
+| Custom K-Means (from scratch) | K=3 | 3 | 0.4565 | 0.6451 | 0.6613 |
+| sklearn KMeans | K=3, init=random | 3 | 0.4630 | 0.5923 | 0.6427 |
+| Agglomerative Clustering | K=3, Ward linkage | 3 | 0.4467 | 0.6153 | 0.6755 |
+| Gaussian Mixture Model | 3 components | 3 | 0.4751 | 0.5165 | 0.6571 |
+| DBSCAN | eps=1.10, min_samples=5 | 2 (+2 noise) | 0.5518 | 0.5656 | 0.7326 |
+
+Agglomerative (Ward) — which shares K-Means's compact, similarly-sized-cluster preference tracks K-Means closely. DBSCAN, the only density-based method, collapses to **2** clusters rather than 3: it cannot separate *versicolor* from *virginica* at all, the same boundary where K-Means itself is weakest, which is independent evidence that the difficulty is a property of the data rather than a K-Means-specific artefact.
+
+**Data pipeline:** 150 observations loaded via `sklearn.datasets.load_iris()`, no missing values, 1 duplicate row retained (a known duplicate in the classic Fisher dataset between two `virginica` observations), 3 perfectly balanced classes (50 each).
 
 ---
 
 ## What I learned:
 
-1. **A Rank-Deficient Scatter Matrix Is the First Thing High-Dimensional Text Breaks.**
+1. **Cluster IDs Are Arbitrary Labels, and Every Downstream Comparison Must Respect That.**
 
-With 2,000 TF-IDF features and a 96.7% sparse matrix, the within-class scatter matrix $\mathbf{S}_W$ is rank-deficient the moment feature count approaches sample count per class. Watching the regularisation sweep collapse from a near-singular, noise-amplifying inversion at $\alpha=10^{-6}$ to an over-shrunk, prior-dominated one at $\alpha=1.0$, with a clear peak at $\alpha=10^{-4}$, made the bias-variance trade-off in matrix inversion tangible in a way the textbook derivation alone doesn't.
+Unlike supervised classification, where predicted label `1` always means the same thing as ground-truth label `1`, K-Means's "cluster 0" carries no inherent meaning. Implementing `compute_mapped_accuracy` from scratch, solving the optimal cluster-to-species assignment via the Hungarian algorithm before computing anything resembling "accuracy," made concrete why ARI and NMI (which are permutation-invariant by construction) are the more fundamentally sound metrics, and why a naive label-matching approach would have been silently wrong.
 
-2. **Matching Sklearn Closely, Not Exactly, Is the Correct Bar for a Regularised Model.**
+2. **Internal and External Metrics Can Disagree, and That Disagreement Is Itself a Finding.**
 
-Unlike a lazy learner such as KNN, where identical hyperparameters guarantee identical predictions, LDA's regularisation strategy is itself a design choice: a fixed ridge $\alpha$ versus Sklearn's adaptive Ledoit-Wolf shrinkage will not produce bit-identical output. 97.49% prediction agreement and metrics within 0.3–0.6 points across the board was the right signal to look for, an exact match would have actually been suspicious given the differing regularisation.
+The silhouette curve favoured $K=2$ over $K=3$, while the external ARI/NMI evidence (once species labels were consulted) supported $K=3$ as the biologically meaningful choice. Reporting this tension honestly, rather than picking whichever $K$ matched the known answer and presenting it as the unsupervised result, was a more defensible use of the evaluation framework than collapsing internal and external evidence into a single number.
 
-3. **An Honest Assumption-Violation Section Is More Useful Than a Silent One.**
+3. **Inertia Only Means Something Within a Fixed Feature Scale.**
 
-TF-IDF features are bounded, sparse, and right-skewed, none of which is Gaussian. Rather than skipping past LDA's core assumption or quietly hoping it doesn't matter, stating the violation explicitly and then explaining why LDA still performs competitively (large-sample robustness, near-linear separability of TF-IDF text) produced a more defensible and more transferable finding than simply reporting the accuracy number.
+Comparing 78.86 (unscaled) against 140.90 (scaled) directly would have implied scaling made clustering four times worse, when the two numbers are in incompatible units (squared centimetres vs. squared standard-deviation units). Reaching for silhouette and ARI, both unit-free, instead of inertia was necessary to make a fair scaled-vs-unscaled judgment at all.
 
-4. **Cleaning Text Creates New Duplicates That Raw-Text Deduplication Cannot Catch.**
+4. **A Matched Random Seed Does Not Mean Matched Behaviour Across Implementations.**
 
-Two reviews that differ only in punctuation, capitalisation, or HTML markup are distinct strings before cleaning and identical after it. Deduplicating once on the raw `(review, sentiment)` pair and calling it done would have silently left near-duplicate rows in the training set; a second, explicit dedup pass on `clean_review` after the cleaning pipeline caught 8 additional collisions the first pass structurally could not.
+Passing `random_state=42` to both the custom implementation and `sklearn.cluster.KMeans` does not guarantee identical initial centroids, since the two draw from different internal sampling procedures even under `init="random"`. The resulting cluster-size divergence (46/49/55 vs. 56/50/44) despite near-identical inertia and silhouette was the concrete demonstration that "same seed" isolates algorithmic correctness, not bit-identical output.
 
-5. **Testing a "Should Help" Idea Is Different From Assuming It Does.**
+5. **Convergence to a Local Optimum Is Not a Hypothetical Caveat.**
 
-PCA preprocessing is the textbook fix for a rank-deficient scatter matrix, it produces a full-rank $\mathbf{S}_W$ without any regularisation at all. But at every tested component count up to 200, PCA+LDA underperformed direct regularised LDA on test accuracy. Running the actual experiment rather than defaulting to the theoretically cleaner approach was what surfaced that gap.
+Thirty independent seeds mostly converged to (nearly) the same solution, but one seed landed at an inertia of 197.47 against a median of ~140.5, a genuinely worse local optimum. Seeing that outlier directly in the stability boxplots, rather than just reading about K-Means's local-optimum limitation in the abstract, was what made the case for smarter initialisation (K-Means++) tangible.
 
-6. **Cross-Validation Must Refit the Full Preprocessing Pipeline, Not Just the Model.**
+6. **Comparing Against Algorithms With Different Assumptions Validates (or Challenges) a Result More Than Comparing Against the Same Algorithm Twice.**
 
-Reusing the training-split TF-IDF vectoriser's vocabulary and IDF weights across all five CV folds would have leaked information from the original split into every fold's evaluation. Refitting the vectoriser from raw cleaned text inside each fold, adding real per-fold preprocessing cost, was necessary for the resulting 0.8799 ± 0.0022 CV accuracy to be a trustworthy generalisation estimate rather than an optimistic one.
+Agglomerative Clustering, which shares K-Means's compact-cluster geometry, agreed closely. DBSCAN, a density-based method with no such assumption, could not separate *versicolor* from *virginica* at all and collapsed them into one cluster. Two independent lines of evidence converging on the same weak spot is stronger support for "this is a property of the data" than any single algorithm's result could provide alone.
 
-7. **Discriminant Weights Are Interpretability That Naive Bayes Doesn't Give You for Free.**
+7. **Empty-Cluster Handling Is a Real Edge Case, Not a Theoretical Nicety.**
 
-Because $w = \Sigma^{-1}(\mu_1 - \mu_0)$ passes the raw class-mean difference through the inverse pooled covariance, LDA's per-feature weights are already correlation-adjusted, co-occurring words don't double-count their evidence the way they would under Naive Bayes' independence assumption. Inspecting the top positive and negative-sentiment features directly showed which vocabulary was actually driving the decision boundary, not just which words were frequent.
+Writing `_handle_empty_clusters` to re-seed any centroid that receives zero assigned points, using the currently worst-fit point, forced confronting a failure mode (unlucky initialisation stranding a centroid) that is easy to skip when only ever calling `sklearn.cluster.KMeans`, but that any correct from-scratch implementation of Lloyd's algorithm must handle explicitly to avoid a division-by-zero crash.
 
 ---
 
