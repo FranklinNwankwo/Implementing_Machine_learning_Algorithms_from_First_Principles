@@ -30,6 +30,7 @@ Each project follows the full ML pipeline: exploratory data analysis, feature en
 |2 | [Hierarchical Clustering](./2.%20Unsupervised_Learning/2.%20Hierarchical_Clustering_mall_dataset/) | Custom Agglomerative Clustering (Ward Linkage via Lance-Williams Update) | Mall Customers Dataset | Complete|
 |3 | [Principal Component Analysis](./2.%20Unsupervised_Learning/3.%20PCA_wine_dataset/) | Custom PCA (Eigendecomposition via NumPy `eigh`) | Wine Dataset | Complete|
 |4 | [DBSCAN Clustering](./2.%20Unsupervised_Learning/4.%20DBSCAN_online_retail_dataset/) | Custom DBSCAN (Region Queries & Density-Reachability via Epsilon-Neighborhoods) | UCI Online Retail Dataset | Complete|
+|5 | [Gaussian Mixture Model](./2.%20Unsupervised_Learning/5.%20Gaussian_Mixture_Model_olivetti_faces/) | Custom GMM (Expectation-Maximization via NumPy/SciPy, Cholesky-based log-densities) | Olivetti Faces Dataset | Complete|
 
 ## REINFORCEMENT LEARNING
 
