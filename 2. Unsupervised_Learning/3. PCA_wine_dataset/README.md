@@ -43,7 +43,7 @@ Key issues encountered and resolved during the project:
 ## Repository Structure
 
 ```
-PCA_wine_dataset/
+3. PCA_wine_dataset/
 ├── notebook/
 │   └── PCA_Wine_Dataset.ipynb
 ├── README.md
