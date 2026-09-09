@@ -46,7 +46,7 @@ Key issues encountered and resolved during the project:
 
 ```
 
-4. Gaussian_Mixture_Model_olivetti_faces/
+5. Gaussian_Mixture_Model_olivetti_faces/
 ├── notebook/
 │   └── Gaussian_Mixture_Model_olivetti_faces.ipynb
 ├── README.md
