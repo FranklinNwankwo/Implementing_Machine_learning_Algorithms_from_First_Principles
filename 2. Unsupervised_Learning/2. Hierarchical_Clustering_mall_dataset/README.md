@@ -41,7 +41,7 @@ Key issues encountered and resolved during the project:
 ## Repository Structure
 
 ```
-2. Hierarchical_Clustering/
+2. Hierarchical_Clustering_mall_dataset/
 ├── notebook/
 │   └── Hierarchical_Clustering_From_Scratch.ipynb
 ├── README.md
