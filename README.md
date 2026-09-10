@@ -34,9 +34,9 @@ Each project follows the full ML pipeline: exploratory data analysis, feature en
 
 ## REINFORCEMENT LEARNING
 
-| # | Project | Algorithm | Dataset | Status |
+| # | Project | Algorithm | Environment | Status |
 |---|---|---|---|---|
-
+| 1 | [Q-Learning](3.%20Reinforcement_Learning/1.%20Q-Learning_FrozenLake) | Q-Learning (Tabular, from scratch) | FrozenLake-v1 (Gymnasium) | Complete |
 
 ---
 
@@ -48,8 +48,8 @@ Each project lives in its own subdirectory and contains:
 project_name/
 ├── data/            # Data files (usually not tracked; loaded programmatically)
 ├── notebook/        # Jupyter notebook
-├── requirements.txt # Project-specific dependencies
-└── README.md        # Project overview, results, and limitations
+├── README.md        # Project overview, results, and limitations
+└── requirements.txt # Project-specific dependencies
 ```
 
 ---
