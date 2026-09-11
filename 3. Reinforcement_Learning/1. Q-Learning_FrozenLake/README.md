@@ -39,7 +39,7 @@ Key issues encountered and resolved during the project:
 ## Repository Structure
 
 ```
-3. Reinforcement_Learning/1. Q-Learning_FrozenLake/
+1. Q-Learning_FrozenLake/
 ├── notebook/
 │   └── Q_Learning_FrozenLake.ipynb
 ├── README.md
