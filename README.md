@@ -38,6 +38,7 @@ Each project follows the full ML pipeline: exploratory data analysis, feature en
 |---|---|---|---|---|
 | 1 | [Q-Learning](3.%20Reinforcement_Learning/1.%20Q-Learning_FrozenLake) | Q-Learning (Tabular, from scratch) | FrozenLake-v1 (Gymnasium) | Complete |
 | 2 | [Deep Q-Network](3.%20Reinforcement_Learning/2.%20Deep%20Q-Network_CartPole) | Deep Q-Network (DQN, from scratch in NumPy) | CartPole-v1 (Gymnasium) | Complete |
+| 3 | [PPO](3.%20Reinforcement_Learning/3.%20PPO_LunarLander) | Proximal Policy Optimization (PPO, from scratch in NumPy) | LunarLander-v3 (Gymnasium) | Complete |
 
 ---
 
