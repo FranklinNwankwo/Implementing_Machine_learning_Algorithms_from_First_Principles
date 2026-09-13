@@ -31,9 +31,13 @@ This project walks through the full unsupervised pipeline:
 Key issues encountered and resolved during the project:
 
 - **Cluster labels are permutation-invariant — element-wise comparison against sklearn would have been meaningless.** Adjusted Rand Index and Normalized Mutual Information (both 1.0000) plus a contingency table are used, instead of checking whether integer label `2` in the custom implementation equals integer label `2` in sklearn's.
+
 - **Adding a feature was tested, not assumed to help.** The full k=2–10 sweep was ran on both the 2D (Income+Spending) and 3D (+Age) feature sets; Age *decreased* Silhouette, Calinski-Harabasz, and Davies-Bouldin scores at nearly every `k`, so it was excluded from the clustering inputs and kept only for post-hoc profiling.
+
 - **The best k by one metric was not the chosen k.** Calinski-Harabasz peaks at k=9 (252.9), not k=5 (244.4), but Silhouette and Davies-Bouldin both peak at k=5, and the dendrogram's clearest visual gap and the EDA scatter plot both independently point to five groups, so k=5 was selected as the configuration with the strongest combined evidence, not the one maximizing a single number.
+
 - **A visually appealing dendrogram cut was checked quantitatively, not trusted on sight.** Flagged a candidate 5-cluster cut from the dendrogram alone; committed to it after the internal validation metrics independently agreed.
+
 - **DBSCAN's disagreement with the other four methods was investigated, not treated as an error.** DBSCAN defines a cluster by density-connectivity rather than distance-to-centroid, so its lower ARI (0.8515) against the hierarchical baseline, and the 23 points it flagged as noise, reflects a genuinely different notion of "cluster," not a bug in either method.
 
 ---
@@ -112,11 +116,17 @@ Selected via combined evidence: the Silhouette-Score maximum (0.554) and Davies-
 ## Limitations
 
 - **The naive implementation does not scale past a few hundred customers**: repeatedly scanning all active cluster pairs is worst-case $O(n^3)$, and the full pairwise distance matrix is $O(n^2)$ in memory, fine for 200 customers, but a production version would need a proper nearest-neighbor-chain algorithm to handle a mall's full customer base.
+
 - **The sample is small (200 customers)** and may not represent the mall's entire population, seasonal variation, or non-card-based shoppers.
+
 - **`Spending Score` is a synthetic, mall-assigned metric**, not a direct measure of transaction value, its exact construction methodology is unknown, which limits how literally its business interpretation should be taken.
+
 - **Clustering finds statistical association, not causation**: a "high income, low spending" segment does not by itself explain *why* those customers spend less.
+
 - **Clusters are a snapshot, not a permanent customer identity** — segment membership will drift as behavior changes over time, and this analysis was not repeated across multiple time periods.
+
 - **Age was tested and excluded as a clustering input**: adding it did not improve, and generally worsened, internal validation scores relative to Income + Spending Score alone; it is retained only for descriptive profiling.
+
 - **DBSCAN's parameters (`eps=0.35`, `min_samples=5`) were set by a simple heuristic**, not a full grid search, its comparison result should be read as indicative of a different clustering paradigm, not as a fully tuned DBSCAN baseline.
 
 ---

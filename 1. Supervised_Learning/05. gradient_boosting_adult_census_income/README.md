@@ -11,26 +11,39 @@ Built to understand the fundamentals of boosting; sequential error-correction vi
 Where bagging (Random Forest) reduces variance by averaging many independent, high-variance trees, boosting takes the opposite approach: it builds trees **sequentially**, each one trained not on the raw target but on the *pseudo-residuals* of the ensemble so far; the negative gradient of the loss function with respect to the current predictions. Each new tree is a small step of gradient descent, taken in function space rather than parameter space, and shrunk by a learning rate before being added to the running prediction. This project implements that idea from first principles for binary classification under log-loss:
 
 1. **Functional Gradient Descent:** At each iteration, the ensemble's current log-odds predictions are converted to pseudo-residuals `y - p`, and a new regression tree is fit to those residuals
+
 2. **Shrinkage:** Each tree's contribution is scaled by a learning rate before being added, trading more iterations for better generalisation
+
 3. **Stochastic Subsampling:** Each tree trains on a random subsample of the training data (subsample < 1.0), reducing correlation between successive trees
+
 4. **Early Stopping:** Training halts once validation loss stops improving for a set number of rounds, rather than running a fixed iteration count blindly.
 
 This project walks through the full supervised learning pipeline:
 
 - **Exploratory Data Analysis (EDA)** — target class imbalance, numerical/categorical feature distributions, correlation analysis, capital gain/loss sparsity, fairness-relevant subgroup patterns (sex, race)
+
 - **Preprocessing** — stratified three-way split, training-set-only mode imputation for missing categorical values, and ordinal encoding fit only on the training split (unseen validation/test categories mapped to a dedicated "unknown" code rather than crashing or leaking)
+
 - **Model Implementation** — a `RegressionTree` (variance-reduction splitting, vectorised sorted-cumulative-sum split search) and a `GradientBoostingClassifierScratch` (log-odds initialisation, pseudo-residual fitting, shrinkage, subsampling, early stopping) both built from scratch with NumPy
+
 - **Validation Against Sklearn** — matched-hyperparameter comparison against `sklearn.ensemble.GradientBoostingClassifier`, including a feature-importance rank correlation check and an explicit accounting of *why* the two diverge where they do
+
 - **Hyperparameter Sensitivity Analysis** — `n_estimators`, `max_depth`, `learning_rate`, `min_samples_split`, and `subsample` sweeps against train/validation curves only (the test set is never touched during tuning)
+
 - **Validation** — 5-fold stratified cross-validation, calibration analysis (Brier score, reliability curve)
+
 - **Comparative Modeling** — benchmarked against sklearn's Gradient Boosting, Random Forest, AdaBoost, a single Decision Tree, Logistic Regression, XGBoost, LightGBM, and a majority-class baseline
+
 - **Diagnostics** — confusion matrix, ROC curve, feature importance (scratch vs. sklearn consensus), and an explicit hypothesis-validation summary checked against the project's own pre-registered predictions
 
 Key issues encountered and resolved during the project:
 
 - **Data leakage in missing-value imputation** — the mode used to fill missing `workclass`/`occupation`/`native_country` values was originally computed from the full dataset before the train/val/test split; fixed to fit the mode on the training split only and apply it to validation/test
+
 - **Test set touched during hyperparameter tuning** — the sweep visualisation originally plotted test-set AUC alongside train/validation for every hyperparameter value tried; removed so the test set is evaluated exactly once, on the final chosen configuration
+
 - **O(n²) split search** — the original `_best_split` recomputed variance from scratch for every candidate threshold via boolean masking; rewritten to sort each feature once and sweep thresholds with running cumulative sums, cutting full training time from ~58 minutes to under 90 seconds with numerically equivalent results
+
 - **A silent pandas `na_values`/`skipinitialspace` interaction bug** — `skipinitialspace=True` strips leading whitespace *before* `na_values=" ?"` gets a chance to match, so the dataset's missing-value marker was never actually being converted to `NaN` — it was training on the literal string `"?"` as if it were a real category. Fixed by matching on `"?"` (without the leading space) instead
 
 ---
@@ -115,8 +128,11 @@ Training ran the full 200 iterations without early stopping triggering (validati
 ## Limitations
 
 - **Leaf values use the mean pseudo-residual, not a Newton-Raphson update**: the textbook Friedman TreeBoost algorithm for log-loss sets each leaf's value via a one-step Newton update (weighted by `p·(1-p)`), not the plain mean of the residuals landing in that leaf. This implementation uses the simpler mean-residual leaf value, which is mathematically valid but under-confident relative to sklearn's classifier; it's the primary reason recall and F1 trail sklearn's `GradientBoostingClassifier` by a wider margin than accuracy or ROC-AUC do (see Results).
+
 - **Pure Python/NumPy is still slower than compiled libraries**: even after vectorising the split search (~44x speedup, from ~58 minutes to under 90 seconds for 200 trees), this remains far slower than XGBoost or LightGBM's compiled implementations, which is an expected and acceptable trade-off for implementation transparency.
+
 - **Historical, socioeconomic dataset**: this is 1994 U.S. Census data. It includes protected attributes (`sex`, `race`) as raw features and reflects the labor-market patterns of its era, it has no claim to generalising to current income distributions or to populations outside the U.S., and any subgroup performance differences reflect patterns in 30-year-old data, not a normative claim about any group.
+
 - **No native handling of unseen categories beyond a dedicated unknown code**: the ordinal encoder maps unseen validation/test categories to a reserved "unknown" integer code rather than a richer strategy (e.g. frequency-based smoothing); in practice this affected only 1 value across the entire validation set and 0 in test.
 
 ---

@@ -11,25 +11,37 @@ Built to understand the fundamentals of ensemble learning — bagging, random fe
 A single Decision Tree trained to low bias tends to overfit: small perturbations in the training data produce substantially different trees — a **high-variance** model. Random Forest addresses this through three mechanisms, all implemented from scratch here:
 
 1. **Bootstrap Aggregation (Bagging)** — each tree trains on a bootstrap sample drawn with replacement, giving trees overlapping but non-identical data
+
 2. **Random Feature Subsampling** — only a random subset of features is considered at each split, decorrelating individual trees
+
 3. **Majority / Probability Voting** — final predictions aggregate all trees' outputs, smoothing out individual errors
 
 This project walks through the full supervised learning pipeline:
 
 - **Exploratory Data Analysis (EDA)** — target distribution, survival by categorical features, Sex×Pclass interaction, numerical feature distributions, correlation analysis
+
 - **Feature Engineering** — title extraction from `Name` via regex, family-size features, cabin-missingness and deck features, ticket-group size and fare-per-person, domain-informed age/fare binning
+
 - **Preprocessing** — stratified three-way split, training-set-only imputation, log1p(Fare) transform, and a manual one-hot encoder class (no `sklearn.preprocessing`, no `pd.get_dummies`)
+
 - **Model Implementation** — a `DecisionTreeClassifier` (Gini impurity, random feature subsampling) and a `RandomForestClassifier` (bagging, majority/probability voting, OOB scoring) both built from scratch with NumPy
+
 - **Hyperparameter Sensitivity Analysis** — `n_estimators`, `max_depth`, `max_features`, and `min_samples_leaf` sweeps, each checked against theoretical bias-variance predictions
+
 - **Validation** — 5-fold stratified cross-validation, decision-threshold optimisation (F1-optimal τ*), and a custom-vs-sklearn parity check
+
 - **Comparative Modeling** — benchmarked against sklearn's Random Forest, Gradient Boosting, AdaBoost, SVM (RBF), and KNN
+
 - **Diagnostics** — feature importance (Mean Decrease in Gini), an ablation study on each feature-engineering step, learning curves, and subgroup error analysis (by Sex, Pclass, Title, FamilyGroup)
 
 Key issues encountered and resolved during the project:
 
 - High-cardinality categorical encoding (`Cabin`, `Ticket`) risking sparse, low-frequency split candidates — resolved by encoding missingness and extracting compact derived features (deck letter, group size) instead of raw values
+
 - Data leakage risk from imputation and one-hot vocabulary being fit anywhere other than the training set
+
 - Distinguishing genuine ensemble gains from variance an individual tree would show under a different random seed — addressed with an explicit single-tree-vs-forest variance experiment
+
 - Known Mean-Decrease-in-Gini bias toward high-cardinality features, flagged explicitly when interpreting feature importances
 
 ---
@@ -97,9 +109,13 @@ See `requirements.txt`. Core libraries used:
 ## Limitations
 
 - **`Cabin` is ~77% missing**: rather than imputing, missingness itself is encoded as a signal (`HasCabin`) and a `Deck` feature is extracted only where known — the majority of cabin information for this dataset is simply unrecoverable.
+
 - **Mean-Decrease-in-Gini importance bias**: MDI is known to be biased toward high-cardinality features, so the feature-importance ranking should be read as directionally informative, not as a precise ranking.
+
 - **Small dataset (~891 passengers)**: after a three-way stratified split, the validation and test sets are small enough that subgroup error analysis (e.g. by `Title` or `FamilyGroup`) can be noisy for the smallest subgroups.
+
 - **No native handling of unseen categories beyond all-zero rows**: the manual one-hot encoder maps unseen validation/test categories to an all-zero indicator row rather than a dedicated "unknown" category, which slightly under-represents genuinely novel categories.
+
 - **Historical, single-event dataset**: the model captures evacuation-priority patterns specific to this ship and disaster; it has no claim to generalising beyond Titanic-like scenarios.
 
 ---

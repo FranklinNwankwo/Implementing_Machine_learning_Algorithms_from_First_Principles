@@ -88,8 +88,11 @@ See `requirements.txt`. Core libraries used:
 ## Limitations
 
 - **Target censoring at $500,001**: `median_house_value` is capped — any true value above $500,000 was recorded as $500,001. This creates an artificial ceiling that biases the regression upward in the high-value range and prevents the model from learning true prices above the cap.
+
 - **`housing_median_age` censoring**: values are capped at 52 years, with all older neighborhoods grouped into a single bin. This produces the same right-censoring effect as the target variable and limits the model's ability to distinguish ages beyond that threshold.
+
 - **Data leakage in imputation**: missing `total_bedrooms` values were imputed with the column median computed on the full dataset *before* the train/test split, so the training statistics were influenced by test-set values. A stricter pipeline would fit the imputation median on the training set only and apply it to the test set.
+
 - Linear regression assumes a linear relationship between features and the target; the California Housing data has notable non-linearities.
 - Outliers in `total_rooms` and `population` affect coefficient estimates.
 - Geographic features (`longitude`, `latitude`) are used as raw inputs rather than being modelled spatially.

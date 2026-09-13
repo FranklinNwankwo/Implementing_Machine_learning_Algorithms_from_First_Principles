@@ -11,8 +11,11 @@ Built to understand DBSCAN's full mechanics; Euclidean distance, epsilon-neighbo
 Unlike K-Means, DBSCAN has no predetermined cluster count and no assumption that clusters are spherical; it groups points by local density connectivity and explicitly labels points that don't fit any dense neighborhood as noise, rather than forcing every point into a cluster. This project implements that idea from first principles:
 
 1. **Mathematical Derivation** — Euclidean distance, the epsilon-neighborhood $N_\varepsilon(p)$, core/border/noise-point definitions, direct density-reachability, density-reachability (chained, not symmetric), and density-connectivity (symmetric, the relation that actually defines a cluster), worked out in full before any code is written
+
 2. **From-Scratch Implementation** — a `DBSCANFromScratch` class (NumPy only) with a vectorized `_calculate_distance`, `_region_query`, `_is_core_point`, and breadth-first seed-set cluster expansion, using the internal label convention `-2` = unassigned, `-1` = noise, `0, 1, 2, ...` = cluster IDs (`-1` matching sklearn's noise convention, `p` counted in its own neighborhood matching sklearn's core-point convention)
+
 3. **Synthetic Validation** — three purpose-built test cases (separated blobs, interleaved moons, blobs plus scattered noise) plus an exact-duplicate-points case, run against the finished class immediately after it's defined, and 10+ unit tests covering distance correctness, region-query correctness, the core-point boundary, parameter validation, empty/single-point input, and the two degenerate `eps` extremes
+
 4. **sklearn Validation** — the custom implementation compared against `sklearn.cluster.DBSCAN` only after it was independently complete, tested on synthetic data, and applied to real customers, using ARI/NMI (label-permutation-invariant) rather than raw label equality, plus direct noise-mask comparison
 
 This project walks through the full unsupervised pipeline:
@@ -36,12 +39,19 @@ This project walks through the full unsupervised pipeline:
 Key issues encountered and resolved during the project:
 
 - **Negative `Quantity` is not synonymous with "cancellation."** Every cancellation invoice does have negative `Quantity` (9,288 rows, 100% overlap), but a separate population of 1,336 negative-quantity rows sits on *ordinary* (non-`C`) invoices — these have missing `Description`, `UnitPrice == 0`, and missing `CustomerID`, the signature of manual stock write-offs rather than customer-initiated cancellations. They're excluded for a different reason (no `CustomerID` to attribute them to), not because they resemble cancellations.
+
 - **The 3 `A`-prefix rows are bad-debt write-offs, not purchases or cancellations**, and would have slipped through a naive `InvoiceNo.startswith("C")` filter entirely, so they're excluded explicitly before that filter is even applied.
+
 - **Severe right-skew (11.97–41.45 across five of six features) would have badly distorted what "dense" means for a distance-based algorithm** if left untransformed; `log1p` visibly pulled every affected feature back toward a symmetric, bell-shaped distribution, and a direct raw-vs-log comparison at identical `eps`/`min_samples` later confirmed the two produce materially different segmentations, not a cosmetic difference.
+
 - **`eps` was not chosen by guesswork.** A k-distance plot (`min_samples=10`: ~0.59 at the 70th percentile climbing to ~0.91 by the 90th) located a knee around the 80th–85th percentile, which seeded a structured grid search (`eps` 0.4–1.2, `min_samples` 3–20) rather than a single hand-picked value. The grid confirmed both degenerate extremes predicted by hypothesis #7: `eps=0.4` fragments into 11–17 tiny clusters at 30–75% noise, `eps≥1.0` collapses to one useless mega-cluster at <5% noise.
+
 - **The custom implementation was validated on synthetic ground truth before ever touching customer data.** Case A (3 separated blobs) recovered exactly 3 clusters with an Adjusted Rand Index confirming correct *assignment*, not just correct count. Case B (interleaved moons) separated two non-convex crescents that K-Means provably cannot recover with centroid-based partitioning. Case C (blobs + scattered outliers) correctly flagged the scattered points as noise. An exact-duplicate-points edge case (distance exactly 0) was also tested, since it must not divide by zero or infinite-loop cluster expansion.
+
 - **The noise population turned out to be the *highest*-value group, not the lowest.** Mean `Monetary` for noise (£7,628) is roughly 4× Cluster 0 (£1,844) and 24× Cluster 1 (£314), with mean `TotalQuantity` (4,498 units) dwarfing both clusters. These are plausibly bulk/wholesale buyers whose purchasing volume and frequency simply don't sit inside either "typical customer" density neighborhood, a statistical fact about local density, not a business value judgment, and a direct confirmation (with a twist) of hypothesis #9.
+
 - **Cluster IDs across independent DBSCAN runs are arbitrary permutations, so raw label equality would have been meaningless.** Adjusted Rand Index and Normalized Mutual Information (both label-permutation-invariant) were used instead to compare the custom implementation against sklearn; the noise mask, in contrast, *is* directly comparable since `-1` has a fixed meaning in both.
+
 - **K-Means/Agglomerative/GMM's higher silhouette scores at matched k did not mean they found a better segmentation.** All three score higher than DBSCAN's non-noise result at k=3, expected, since silhouette rewards forcing every point into its nearest centroid — exactly what DBSCAN's noise mechanism refuses to do. Low ARI against DBSCAN (well under 0.3 for all three) confirmed these algorithms weren't recovering the same structure under a different name; none of them has a way to say "482 of these customers don't fit either normal pattern."
 
 ---
@@ -125,13 +135,21 @@ See `requirements.txt`. Core libraries used (pinned versions from the notebook's
 ## Limitations
 
 - **DBSCAN assumes a single global `eps` is adequate**, i.e. roughly uniform density across clusters. If one true segment is much denser than another, a single `eps` can under, or over-cluster one of them, a known limitation distinct from HDBSCAN's variable-density handling.
+
 - **Parameter selection remains partly heuristic.** k-distance analysis and grid search guided `eps`/`min_samples`, but there is no closed-form optimum for either.
+
 - **The naive $O(n^2)$ region-query approach used here would not scale gracefully to millions of points** without spatial indexing (k-d/ball trees).
+
 - **Euclidean distance becomes less discriminating in higher dimensions.** Six features is modest, but this wouldn't hold at, say, 50+ raw product-level features without dimensionality reduction first.
+
 - **The dataset covers roughly one year (Dec 2010–Dec 2011) for a single UK-based retailer** — behavior patterns may not generalize to other retailers, seasons, or time periods.
+
 - **~25% of raw transactions carry no `CustomerID`** and are structurally excluded from ever informing the segmentation.
+
 - **Returns/cancellations were deliberately kept out of the primary feature set**, so revenue attribution around them is intentionally incomplete for this segmentation's purposes.
+
 - **Clusters are descriptive of observed behavior, not causal explanations** of why customers behave that way, and a DBSCAN noise label should never be automatically read as "problem customer."
+
 - **Segments reflect a historical snapshot and will drift**; this is not a live, continuously-updated model, and any resulting marketing action should be validated against real campaign outcomes before being treated as more than a well-supported starting hypothesis.
 
 ---

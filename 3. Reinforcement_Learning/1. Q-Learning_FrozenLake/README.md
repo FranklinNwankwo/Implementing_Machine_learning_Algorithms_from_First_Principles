@@ -29,9 +29,13 @@ This project walks through the full RL validation pipeline:
 Key issues encountered and resolved during the project:
 
 - **`terminated` vs. `truncated` conflation would have silently corrupted the value function** — FrozenLake-v1's default `TimeLimit` wrapper sets `truncated=True` after 100 steps on a *non-terminal* state; treating that the same as `terminated` would have told the agent "this state has zero future value" purely because of a wall-clock cutoff. The training loop reads both flags explicitly and only suppresses bootstrapping on genuine termination.
+
 - **A single sampled Bellman residual is not the same diagnostic in a stochastic environment** — for the deterministic configuration the exact Bellman residual can be computed directly from the known transition table; for the stochastic configuration a single observed transition's residual is a noisy sample of a random variable, not the expectation, so this distinction is stated explicitly rather than reporting one number as if it meant the same thing in both settings.
+
 - **Constant learning rate does not satisfy classical convergence theory** — $\alpha=0.20$ (deterministic run) and $\alpha=0.10$ (stochastic run) violate the Robbins–Monro condition $\sum \alpha_t^2 < \infty$. Rather than describing the flat training curves as "convergence," the notebook explicitly distinguishes *empirical stabilization* (small, decreasing $|\Delta Q|$ and policy-change rate within a finite budget) from the theorem-backed asymptotic guarantee, and implements a diminishing-$\alpha_t = \alpha_0/\text{visits}(s,a)$ variant that does satisfy the theoretical conditions as a separate, optional comparison.
+
 - **Random policy-agreement ties across untested states would have overstated correctness if measured naively** — several non-terminal states have multiple equally-optimal actions under the true dynamics (symmetric detours, states off the optimal path); policy agreement with the value-iteration oracle is reported for all states *and* restricted to non-terminal states, alongside state-value correlation and mean absolute value error, rather than relying on raw action-match percentage alone.
+
 - **A single training run can look successful by chance** — every headline result (deterministic success rate, stochastic success rate, the algorithm comparison) is reported across multiple independent seeds as mean ± std, not from one lucky run; this is what surfaced SARSA's seed-sensitivity (see Results).
 
 ---
@@ -112,10 +116,15 @@ Selected via a one-at-a-time hyperparameter sensitivity sweep on the determinist
 ## Limitations
 
 - **FrozenLake is a toy environment**: a 16-state, 4-action grid is small enough to validate exhaustively, that is precisely its value here, but a 100% success rate on it is a correctness demonstration, not evidence of readiness for real robotics, navigation, or control.
+
 - **Tabular representation does not scale**: the $O(|S|\cdot|A|)$ Q-table (64 floats here) becomes intractable the moment the state space is continuous or high-dimensional (pixels, joint angles), which is the direct motivation for function-approximation methods like DQN, implemented conceptually in the notebook's discussion, not in code.
+
 - **A constant learning rate does not satisfy classical convergence theory**: the primary runs use $\alpha=0.20$/$0.10$, which violates the Robbins–Monro conditions required for a formal convergence guarantee. The flat training curves and small $|\Delta Q|$ observed are empirical stabilization within a finite episode budget, not proof of convergence to $Q^*$ — the notebook is explicit about this distinction rather than conflating the two.
+
 - **Stochastic-environment performance has a hard ceiling that better hyperparameters cannot remove**: even a correctly-learned optimal policy under `is_slippery=True` will fall into a hole on some fraction of episodes purely from an unlucky slip; 73–75% success (vs. 100% deterministic) reflects genuine environment randomness, not an undertrained agent.
+
 - **On-policy algorithms can be seed-sensitive in ways off-policy algorithms are not**: SARSA reached 100% success on 5 of 6 benchmark seeds but got stuck on one, pulling its mean to 83.33% with a std of 40.82, a real finding about on-policy TD sensitivity to early trajectories in a sparse-reward setting, not a bug (see Results).
+
 - **Bellman-residual diagnostics require access to the true environment dynamics**: the exact residual computed here uses `env.unwrapped.P` directly, which is available only because FrozenLake is a fully-known, small environment; a real deployed agent would not have this and would need to rely on sampled (noisier) residuals instead.
 
 ---

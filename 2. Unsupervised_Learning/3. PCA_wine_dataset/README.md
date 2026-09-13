@@ -11,8 +11,11 @@ Built to understand PCA's full mathematical machinery; centering, standardizatio
 Unlike a supervised model, PCA has no target to fit against, it is an unsupervised search for the orthogonal directions of maximum variance in the data, and the wine cultivar label is withheld from it entirely. This project implements that idea from first principles:
 
 1. **Mathematical Derivation** — centering, the covariance matrix $\Sigma = \frac{1}{n-1}X_c^\top X_c$, the eigenvalue problem $\Sigma v = \lambda v$, explained/cumulative variance ratio, projection, and reconstruction, worked out in full before any code is written
+
 2. **From-Scratch Implementation** — a `PCAFromScratch` class (NumPy only) with explicit centering, optional standardization, covariance construction, `numpy.linalg.eigh`-based eigendecomposition, descending eigenvalue sorting, component selection, `transform`, and `inverse_transform`
+
 3. **Unit Testing** — a synthetic 2-feature dataset with a known dominant direction (recovered to within 0° after sign alignment), 13 hand-verifiable property tests (centering, standardization, orthogonality, variance conservation, reconstruction), and 5 edge cases (single component, all components, over-requested components, a constant feature, near-perfectly correlated features)
+
 4. **sklearn Validation** — the custom implementation compared against `sklearn.decomposition.PCA` only after it was independently complete, using sign-ambiguity-aware component comparison rather than raw elementwise subtraction
 
 This project walks through the full unsupervised pipeline:
@@ -33,9 +36,13 @@ This project walks through the full unsupervised pipeline:
 Key issues encountered and resolved during the project:
 
 - **Eigenvector sign ambiguity meant naive comparison against sklearn would have looked broken when it wasn't.** Because $v$ and $-v$ represent the identical principal direction, 8 of the 13 components (PC2, PC4, PC7, PC8, PC9, PC10, PC12, PC13) needed a sign flip before they matched sklearn's chosen orientation. Comparing each component against whichever sign agreed better — not raw elementwise subtraction — is what turned a `1.15e-14` max component difference from "looks like disagreement" into "matches to floating-point precision."
+
 - **Standardization was tested, not assumed necessary.** Fitting PCA on raw (unstandardized) features let a single large-scale variable, Proline, claim 99.8% of "explained variance" on PC1 alone, a unit-of-measurement artifact, not chemical insight. After standardizing, PC1's leading contributor became Flavanoids and variance spread far more evenly across the leading components (36.2% on PC1 instead of 99.8%).
+
 - **A ~2.66e-02 raw eigenvalue gap against sklearn was traced to a ddof convention, not treated as a bug.** The custom standardization step uses `ddof=1`; `sklearn.preprocessing.StandardScaler` uses `ddof=0`. That's a uniform scalar factor across all 13 features, so it shifts every raw eigenvalue by the same ratio but cancels out completely in the explained variance *ratio* (which matched sklearn's to `1.67e-16`), confirming the ratio, not the raw eigenvalue, is the number to trust when comparing two independent PCA implementations.
+
 - **Dimensionality reduction was checked against downstream clustering quality, not assumed to help or hurt it.** K-Means and GMM Silhouette scores nearly doubled when clustering on the 2D PCA subspace instead of the full 13D standardized space (K-Means: 0.285 → 0.561), while agreement with the true cultivar labels (Adjusted Rand Index, Normalized Mutual Information) barely moved, evidence the 11 discarded dimensions were mostly adding noise to the distance calculation, not signal.
+
 - **LDA's cleaner class separation was not mistaken for PCA underperforming.** In the Experiment 10 benchmarking plot, LDA visibly separates the three cultivars more cleanly than PCA — but LDA is handed the cultivar labels directly and optimizes for separability, so its result is a supervised contrast, not a stronger unsupervised projection.
 
 ---
@@ -114,11 +121,17 @@ Standardization was selected over raw-feature PCA by direct comparison, not by d
 ## Limitations
 
 - **PCA captures linear structure only.** Kernel PCA (RBF kernel) produced a broadly similar 2D picture to linear PCA in this dataset, suggesting the dominant structure here happens to be close to linear, that won't hold for every dataset PCA is applied to.
+
 - **The from-scratch eigendecomposition is a direct `eigh` call on the full $p \times p$ covariance matrix**, fine at $p=13$, but not the randomized/truncated approach a very high-dimensional feature space would need.
+
 - **The sample is modest (178 wines) from three known cultivars in one region**, the bootstrap stability result speaks to this specific dataset, not to generalization across wine populations.
+
 - **Explained variance is not the same thing as predictive usefulness for a specific downstream task.** A low-variance direction PCA discards could still matter for some question other than the one asked here.
+
 - **Component interpretation stops at "phenolic/flavor axis"-level description, not causal chemistry.** PCA identifies directions of variance, not the chemical processes producing that variance.
+
 - **t-SNE's embedding is not variance-preserving** and shouldn't be read on the same axes-have-meaning basis as PCA's components.
+
 - **LDA's cleaner separation uses the cultivar labels directly** — a supervised benchmark, not a stronger version of the unsupervised problem PCA is solving.
 
 ---

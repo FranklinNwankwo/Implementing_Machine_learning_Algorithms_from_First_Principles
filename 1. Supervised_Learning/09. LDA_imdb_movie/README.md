@@ -30,8 +30,11 @@ This project walks through the full supervised learning pipeline:
 Key issues encountered and resolved during the project:
 
 - **Cross-validation would have leaked information through the vectoriser** — pooling the already-vectorised TF-IDF matrices across folds would have reused a vocabulary/IDF fit on the original 70% training split for every fold; instead, Section 13 refits the `TfidfVectorizer` from raw cleaned text inside each fold independently
+
 - **A second, distinct duplication source after text cleaning** — the raw `review`/`sentiment` pair was deduplicated first (418 rows dropped), but cleaning (HTML/punctuation/stopword removal) can make two originally different reviews collapse into the same `clean_review` string; the notebook re-checks duplicates against `clean_review` and drops those separately (49,582 → 49,574 rows) rather than assuming the first dedup pass caught everything
+
 - **PCA preprocessing was tested, not assumed to help** — Section 10 ran regularised direct LDA against PCA+LDA at `n_components ∈ {50,100,150,200}`; even at 200 components (26.5% variance explained), PCA+LDA's test accuracy (0.8602) did not surpass regularised direct LDA (0.8697), so the direct, regularised approach was kept as the primary model rather than defaulting to PCA on the theoretical argument that it produces a "cleaner" full-rank solution
+
 - **The Gaussian assumption is violated and the notebook says so directly** — TF-IDF features are bounded, sparse, and right-skewed, a clear violation of LDA's normality assumption; rather than glossing over this, Section 8 states the consequence explicitly (a suboptimal discriminant relative to non-Gaussian-assuming models) and treats LDA's competitive results as an example of robustness to assumption violations at large sample size, not evidence the assumption doesn't matter
 
 ---
@@ -112,11 +115,16 @@ Selected via a validation-set sweep over $\alpha \in \{10^{-6}, 10^{-5}, 10^{-4}
 ## Limitations
 
 - **LDA's Gaussian assumption is violated by construction**: TF-IDF features are bounded in [0, 1], sparse (a spike at zero), and right-skewed for non-zero values. LDA remains competitive in practice because it is robust to this violation at large sample sizes with genuinely discriminative features, not because the assumption holds.
+
 - **Ridge regularisation, not covariance shrinkage, is used**: a fixed $\alpha$ tuned by validation-set sweep is simpler than Scikit-Learn's data-adaptive Ledoit-Wolf shrinkage (`shrinkage='auto'`), and accounts for most of the accuracy gap to Sklearn's implementation (0.8697 vs. 0.8728).
+
 - **Dense arrays are required**: the from-scratch NumPy implementation needs dense matrix arithmetic, which is feasible at a capped vocabulary of 2,000 features (96.7% sparse) but would not scale to the full unconstrained vocabulary without sparse-aware linear algebra.
+
 - **PCA preprocessing was tested and did not outperform direct regularised LDA**: at the largest tested `n_components` (200, 26.5% variance explained), PCA+LDA reached 0.8602 test accuracy versus 0.8697 for direct LDA — useful for illustrating the rank-deficiency/full-rank trade-off, but not adopted as the primary model.
+
 - **Predicted probabilities are not well calibrated**: LDA's softmax-derived probabilities amplify discriminant score differences non-linearly; the reliability diagram in Section 14 should be consulted before using raw `predict_proba()` output as a calibrated confidence score in production (Platt scaling or isotonic regression would be needed).
-- **Negation and mixed-sentiment language remain hard**: error analysis shows false negatives concentrated in reviews with negated positive phrasing (e.g. "not bad at all") and false positives concentrated in mixed or sarcastic reviews — LDA's linear boundary cannot model this non-linear interaction, and bigrams only partially mitigate it.
+
+- **Negation and mixed-sentiment language remain hard**: error analysis shows false negatives concentrated in reviews with negated positive phrasing (e.g. "not bad at all") and false positives concentrated in mixed or sarcastic reviews, LDA's linear boundary cannot model this non-linear interaction, and bigrams only partially mitigate it.
 
 ---
 

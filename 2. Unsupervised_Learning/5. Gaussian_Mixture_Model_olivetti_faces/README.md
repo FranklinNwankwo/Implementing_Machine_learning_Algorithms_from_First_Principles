@@ -36,8 +36,11 @@ This project walks through the full unsupervised learning pipeline:
 Key issues encountered and resolved during the project:
 
 - **The last E-step value inside the fit loop is not the log-likelihood of the returned parameters** — the loop's E-step is evaluated *before* the corresponding M-step update, so the notebook explicitly recomputes the log-likelihood one more time from the final M-step parameters (`final_ll`) after the loop breaks, rather than reusing the last recorded value, to keep `lower_bound_` internally consistent
+
 - **`full` covariance looked like the best model until the held-out set was checked** — at K=20 with ~16 training points per component, `full` covariance reaches the highest *training* log-likelihood but its *held-out* log-likelihood collapses to an extreme, deeply negative value (near-singular per-component covariance estimates assigning vanishing density to unseen faces); BIC's parameter-count penalty flags the same problem from the training set alone
+
 - **Log-likelihood, BIC, AIC, and silhouette disagree on the "best" K, and the notebook reports the disagreement rather than picking one and hiding the rest** — BIC is minimized at the smallest K tested (K=5), AIC keeps improving toward the largest K tested, and silhouette favors the largest K tested (K=40); K=20 is kept for the remaining experiments as a stated, deliberate compromise, not the optimum by any single metric
+
 - **Comparable objective values but low hard-assignment agreement with sklearn is not a bug** — the custom and sklearn implementations reach final log-likelihoods within about 0.9% of each other, but hard-assignment agreement after Hungarian label-alignment is only 18.8% (ARI 0.062); the initialization-sensitivity experiment already showed this is the expected signature of two independent EM runs landing in different (but similarly good) local optima at K=20, not evidence one implementation is wrong
 
 ---
@@ -121,11 +124,17 @@ K=20 with diagonal covariance is a deliberate compromise, not the optimum by any
 ## Limitations
 
 - **EM converges to local optima**: five single-restart fits at K=20 produced final log-likelihoods spread over ~4% of their mean magnitude and a mean pairwise Adjusted Rand Index of only 0.101 between differently-seeded hard-assignment solutions; multi-restart fitting (`n_init >= 3`) is used everywhere a result is reported for exactly this reason.
+
 - **`full` covariance overfits sharply at this sample size**: with ~16 training points per component at K=20, `full` covariance reaches the highest training log-likelihood but a catastrophically worse held-out log-likelihood than `diag`, `spherical`, or `tied`; `diag` is the standing default throughout.
+
 - **The choice of K is a documented judgment call, not a uniquely correct answer**: BIC, AIC, and silhouette disagree on the best K across the {5, 10, 15, 20, 25, 30, 40, 50} sweep, and K=20 was selected as an explicit trade-off rather than an automatic rule.
+
 - **High-dimensional covariance estimation is data-hungry**: full covariance is usable only at low K or with strong regularization, given only 400 images total.
+
 - **Discovered clusters do not necessarily represent actual subject identities**: the custom GMM's ARI against subject identity (0.109) and NMI (0.621) are moderate, not high, confirming that visual similarity in PCA space (pose, lighting, coarse shape) is correlated with, but distinct from, identity.
+
 - **PCA may discard identity-specific detail** that lies in low-variance directions; the PCA-dimensionality experiment explored this trade-off (10 to 150 components) but did not exhaustively search it.
+
 - **Sample size is small (400 images, 10 per subject)**: every finding, especially the `full`-covariance overfitting and the Bayesian GMM's aggressive component-pruning, is partly a consequence of this and would need re-examination on a larger dataset before generalizing.
 
 ---

@@ -31,7 +31,9 @@ This project walks through the full supervised learning pipeline:
 Key issues encountered and resolved during the project:
 
 - **The regularization (`C`) sweep was deliberately evaluated on an internal validation split carved out of the training set** — never on `X_test`/`y_test` — so the test set stays fully unseen during model selection, the same test-set discipline enforced in the rest of the portfolio series
+
 - **`ClassifierMixin`/`BaseEstimator` inheritance order mattered**: the sklearn-compatibility wrapper (`SKLearnCompatibleSVM`) requires `ClassifierMixin` to come *before* `BaseEstimator` in the class definition — with the reverse order, scikit-learn's current tag-resolution system breaks `cross_validate` outright, not just silently misbehaves
+
 - **Hypothesis H4 ("ensembles slightly outperform linear SVM") was only conditionally confirmed, not confirmed outright** — on the 5-fold CV benchmark, Logistic Regression actually ranked #1 by ROC-AUC ahead of every ensemble method, and the Custom SVM itself outranked Random Forest, Gradient Boosting, and XGBoost; the honest read is "some models beat linear SVM, but not consistently the ensembles," not the cleaner story the hypothesis predicted
 
 ---
@@ -115,10 +117,15 @@ Selected via a regularization sweep over `C ∈ {0.01, 0.1, 1, 10, 100}` on an i
 ## Limitations
 
 - **Linear kernel only**: the custom implementation supports the primal linear SVM. Non-linear boundaries (RBF, polynomial) require switching to the dual form and the kernel trick, which this implementation doesn't attempt.
+
 - **Solver quality, not correctness, is the real gap to sklearn**: the custom SVM matched sklearn's Linear SVC exactly on every test-set metric (0.00 pp gap), but its 5-fold CV wall time (6.70s) was roughly 15–17× slower than sklearn's SVC implementations (0.35–0.43s), since LibSVM solves the dual QP via SMO while this implementation uses primal mini-batch subgradient descent.
+
 - **Probability calibration is a rough approximation**: `predict_proba` uses a sigmoid transform of the decision score, not true Platt scaling (a cross-validated logistic fit on decision scores, as sklearn does internally).
+
 - **Multicollinearity limits weight interpretability**: radius/perimeter/area and mean/worst versions of the same measurement are highly correlated, so individual feature-weight magnitudes can't be read as clean feature importances — the optimizer may arbitrarily split weight among correlated features.
+
 - **Small, clean, single-domain dataset (569 samples)**: no missing values, no noisy features, and PCA already shows strong linear separability — an ideal dataset for illustrating the algorithm's mechanics, not a stress test of its robustness on noisy or highly non-linear data.
+
 - **H4 was only conditionally confirmed**: the assumption that ensemble methods outperform a linear SVM didn't hold cleanly on this dataset — Logistic Regression and the Custom SVM itself outranked all three ensemble methods on 5-fold CV ROC-AUC.
 
 ---
@@ -197,7 +204,9 @@ The custom implementation ranks **2nd of 11 models on ROC-AUC**, outranking ever
 **Hyperparameter sweeps (learning rate, `C`, epochs):**
 
 - **Learning rate:** all three tested rates (η = 0.1, 0.01, 0.001) converged to essentially the same solution (accuracy 0.9474–0.9561, malignant recall 0.8810 across the board) at 1000 epochs, indicating the objective's convexity makes the final solution insensitive to learning rate at this scale.
+
 - **Regularization (`C`), on the internal validation split:** accuracy and malignant recall both rose sharply from `C=0.01` (0.6264 acc / 0.0 recall / 355 SVs) through `C=10` (0.9780 acc / 0.9412 recall / 66 SVs), then accuracy dipped slightly at `C=100` (0.9670 acc / 36 SVs) even as ROC-AUC kept climbing (0.9985) — consistent with the classic narrow-margin overfitting risk at very high `C`. `C=10` was selected as the best accuracy/recall balance.
+
 - **Epochs:** accuracy, recall, and final loss were already stable at 100 epochs (0.9561 / 0.8810 / loss 0.2651) and stayed essentially unchanged through 5000 epochs, while training time scaled linearly from 0.18s to 7.2s — confirming 1000 epochs is sufficient and additional epochs buy nothing but wall time.
 
 **Hypothesis Evaluation:**

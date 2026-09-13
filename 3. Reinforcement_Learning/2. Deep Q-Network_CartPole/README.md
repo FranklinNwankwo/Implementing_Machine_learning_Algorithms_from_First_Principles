@@ -30,8 +30,11 @@ This project walks through the full reinforcement-learning pipeline:
 Key issues encountered and resolved during the project:
 
 - **A silent double-division bug in backpropagation, caught only by the gradient check** — the first draft of `backward()` divided by the batch size a second time (once implicitly via `dOut`, once explicitly inside the layer gradients), which still ran without error and still looked like it was training. The finite-difference gradient check flagged a ~0.6 relative error against the analytical gradient before any RL logic was layered on top, well above the 1e-4 tolerance; removing the redundant division brought the error to ~2e-9. Without that check, this bug would not have surfaced as a crash, only as a network that quietly failed to learn as well as it should have.
+
 - **Truncation was never allowed to look like termination** — CartPole's 500-step cap ends an episode without the pole having actually fallen. The replay buffer stores `terminated` explicitly and separately from the loop's `done` flag (`terminated or truncated`), so the TD target only skips bootstrapping on a genuine terminal state, never on a time-limit truncation.
+
 - **The external library benchmark (Stable-Baselines3) was deliberately not run** — pulling in a full PyTorch-based framework as a "reference" would work against the from-scratch purpose of the project for the sake of a single comparison number, so it is documented as an explicit limitation and left as future work rather than silently included or silently skipped.
+
 - **The target-network ablation did not behave as the textbook story predicts, and the notebook reports that directly** — see *Results* below; in the single-seed ablation run, removing the target network did not clearly hurt performance the way removing replay or epsilon decay did. Rather than forcing the result to match the expected narrative, the notebook reports the number as measured and discusses why CartPole specifically may be too easy a benchmark to expose the instability a target network is meant to fix.
 
 ---
@@ -115,9 +118,13 @@ Chosen for solid performance within a modest compute budget (~2 minutes for all 
 ## Limitations
 
 - **DQN carries no formal convergence guarantee**: nonlinear function approximation combined with bootstrapping and off-policy data (the "deadly triad") breaks tabular Q-learning's convergence proof. The results below support empirical stabilisation on this benchmark, not a proof of convergence to $Q^*$.
+
 - **Ablation and hyperparameter-sensitivity runs used a single seed each**, for compute-budget reasons, unlike the 5-seed main evaluation — their qualitative direction is informative, but exact magnitudes carry more sampling noise than the main result.
+
 - **No established framework-based DQN benchmark was run** (see *Key issues* above) — the random and heuristic baselines anchor the low and high ends of "sane" CartPole performance instead.
+
 - **CartPole is a low-dimensional, fully-observable, stationary benchmark.** None of these results should be read as evidence this implementation is ready for real robotic or physical control systems, which involve partial observability, safety constraints, continuous actions, and non-stationary dynamics this project does not address.
+
 - **Performance is meaningfully hyperparameter-sensitive** (see *Results*) — the configuration above reflects one reasonable setting, not a tuned optimum.
 
 ---

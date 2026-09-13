@@ -96,11 +96,17 @@ See `requirements.txt`. Core libraries used:
 ## Limitations
 
 - **Linear separability.** Both from-scratch models need an almost-zero threshold (τ≈0.003–0.007) to catch every single fraud case in the test set, at a precision of ~0.002, essentially flagging everyone as fraud. That's a real cost/precision limitation, but not literal irrecoverability: `sigmoid(z) > 0` for every finite `z`, so recall trivially reaches 1.0 for *any* model at a low enough threshold. The tree-based benchmarks (Random Forest, XGBoost outperforming both LR variants on F2/AUC-PR) are the actual controlled evidence that a nonlinear boundary helps here.
+
 - **PCA information ceiling**: `V1`–`V28` were PCA-transformed upstream by the dataset creators. Any fraud-relevant signal discarded in that transformation is permanently invisible to any model trained on this data, and the resulting weights can't be mapped back to business-meaningful features.
+
 - **SMOTE interpolates blindly**: synthetic samples are generated between any two minority-class neighbours regardless of whether the interpolated point is realistic or falls near a class boundary.
+
 - **48-hour dataset window**: fraud patterns evolve over time; no concept-drift mechanism is implemented.
+
 - **Independence assumption untestable**: there is no cardholder ID, so within-cardholder correlation across multiple transactions can't be measured or corrected for.
+
 - **No explicit regularisation**: L2 weight decay was not implemented on the from-scratch model; early stopping is its sole overfitting control. This is also the likely reason its AUC-PR outpaces sklearn's L2-regularised LR (see Results).
+
 - **Brier score is not a fair calibration bar at this prevalence.** Predicting p≈0 for every transaction is "correct" 99.84% of the time by construction, so a majority-class dummy trivially posts a near-zero Brier score with zero actual fraud-detection skill. Both from-scratch models score *worse* than the dummy on raw Brier (see Results); that reflects the metric's blind spot at extreme imbalance, not a calibration failure; AUC-ROC/AUC-PR/F2 are the metrics that actually reflect fraud-detection skill here.
 
 ---

@@ -31,9 +31,13 @@ This project walks through the full supervised learning pipeline:
 Key issues encountered and resolved during the project:
 
 - **Two hyperparameter sweeps were entirely test-set-driven, with no validation split anywhere in the notebook** — the Laplace-smoothing (`α`) sweep and vocabulary-size sweep both selected and characterized "best" values by evaluating directly against the test set in a loop, with no cross-validation or held-out validation data used anywhere else in the notebook to fall back on. Fixed by carving a stratified 15% validation split out of the training data specifically for these two sections, leaving the true test set completely unseen until final reporting. This changed the actual sweep results (the corrected smoothing sweep shows a smooth monotonic decline as `α` increases, not the U-shaped curve the original test-set-driven sweep suggested), which meant the hypothesis conclusion drawn from it needed rewriting to match, not just the code.
+
 - **A hardcoded confusion-pair example that wasn't in the model's own confusion data** — the error-analysis write-up cited `talk.politics.misc` ↔ `talk.politics.mideast` as a confused pair, but the notebook's own top-15 most-confused-pairs table has no such entry; the actual second-most-confused pair overall is `talk.politics.misc` → `talk.politics.guns`. Corrected to match the table.
+
 - **A hypothesis summary table that understated its own strongest result** — the final hypothesis-validation table described sklearn agreement as ">97% prediction agreement; <0.5% accuracy delta," when the actual measured result was **100% agreement (0 disagreements out of 7,532 predictions) and a 0.0000 accuracy delta** — a strictly better result than what was reported.
+
 - **A misleading sklearn training-time comparison, caught and explained rather than left as a false signal** — the validation section's sklearn baseline showed a training time of ~119 seconds, dramatically slower than the custom implementation, which would wrongly suggest sklearn is inefficient. Traced to sklearn being fit on this notebook's dense `int32` document-term matrix rather than a sparse one; 20 Newsgroups' DTM is 99.71% sparse, and Section 14's benchmark (built on a proper sparse `CountVectorizer` matrix) shows sklearn training in ~75ms, consistent with its reputation. The accuracy and agreement numbers from that section were unaffected; only the training-time figure needed the caveat.
+
 - **An initial hypothesis about a data artifact, tested and retracted once evidence didn't support it** — the `ax` token's unusually high frequency was initially suspected to be a header/footer/quote artifact. The leakage-ablation experiment (stripping headers, footers, and quotes) showed `ax` persisting at nearly its original frequency (62,485 occurrences, barely changed from 62,520), ruling that hypothesis out; it's a body-text encoding artifact instead, most likely from quoted-printable content in Windows-related posts.
 
 ---
@@ -114,9 +118,13 @@ See `requirements.txt`. Core libraries used:
 ## Limitations
 
 - **The headline accuracy is inflated by metadata leakage.** With headers, footers, and quoted reply text kept, the model scores 79.69% accuracy; with them stripped, accuracy drops to 64.79% — a 14.9-point gap. The higher figure should be read as an upper bound reflecting how easy this particular dataset's headers make classification, not a clean measure of topic-classification ability from message content alone.
+
 - **The conditional independence assumption is false and shows up in specific failure modes.** Classes with overlapping vocabulary (e.g., `alt.atheism` and `talk.religion.misc`, or the various `comp.sys.*.hardware` categories) are the most confused pairs, exactly where word co-occurrence patterns that Naive Bayes can't model would be most informative.
+
 - **The Laplace-smoothing sweep does not actually validate the smoothing hypothesis as originally framed.** On the corrected, validation-set-based sweep, accuracy declined monotonically from `α=0.001` (0.8787) to `α=10` (0.8015) — less smoothing was consistently better across the entire tested range. True zero smoothing (`α=0`, which would cause `-∞` log-likelihoods for unseen words) was never tested, so the underlying theoretical justification for smoothing isn't ruled out, but the specific claim that `α=1` sits near an optimal middle ground is not supported by this data.
-- **A body-text encoding artifact (`ax`) inflates one class's error rate independent of metadata leakage.** `comp.os.ms-windows.misc` collapses to near-zero recall partly because of this artifact, which persists even after headers/footers/quotes are stripped — a bag-of-words model has no mechanism to distinguish genuine topic signal from this kind of noise.
+
+- **A body-text encoding artifact (`ax`) inflates one class's error rate independent of metadata leakage.** `comp.os.ms-windows.misc` collapses to near-zero recall partly because of this artifact, which persists even after headers/footers/quotes are stripped, a bag-of-words model has no mechanism to distinguish genuine topic signal from this kind of noise.
+
 - **No context or word order.** The bag-of-words representation can't distinguish semantically different phrasings that share the same words.
 
 ---

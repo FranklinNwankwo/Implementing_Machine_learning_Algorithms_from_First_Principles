@@ -93,9 +93,13 @@ See `requirements.txt`. Core libraries used:
 ## Limitations
 
 - **Exhaustive threshold search is O(n·d) per split**: the scratch tree evaluates every midpoint between sorted unique feature values at every node, which doesn't scale to very large datasets the way sklearn's optimised Cython implementation does.
+
 - **No native multi-class support**: the implementation is built and validated for binary classification only.
+
 - **Small test set (15%, ~85 samples)**: several models including Logistic Regression reach 100% test accuracy, which likely reflects the dataset's strong class separability and limited test-set size rather than guaranteed generalisation to unseen clinical data.
+
 - **Post-pruning is exploratory only**: cost-complexity pruning is demonstrated via sklearn's `ccp_alpha` path for theoretical illustration, not implemented from scratch or applied to the final scratch tree.
+
 - **No external validation cohort**: all evaluation is on splits of the same single-institution dataset; no true out-of-distribution or multi-site validation is performed.
 
 ---

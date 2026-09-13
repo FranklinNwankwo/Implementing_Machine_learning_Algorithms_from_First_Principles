@@ -29,7 +29,9 @@ This project walks through the full supervised learning pipeline:
 Key issues encountered and resolved during the project:
 
 - **A hypothesis marked "Confirmed" that the notebook's own numbers contradicted** — the scaling-impact hypothesis (H4) was originally reported as confirmed, but the actual comparison showed unscaled KNN (100.0%) outperforming scaled KNN (93.3%) on the test set; corrected to "Not confirmed," with the likely explanation (a 30-sample test set, and Iris's features already sharing comparable units) stated explicitly rather than glossed over
+
 - **Test-set accuracy visualized during hyperparameter search** — the K-sweep plot originally charted test accuracy alongside train and cross-validation accuracy across all 11 K values; removed so the test set isn't visually inspected during model selection, even though the actual K choice was always driven by cross-validation, not test performance
+
 - **A hardcoded audit number that didn't match its own computed output** — a structural-audit table claimed 3 duplicate rows while the cell computing that count directly above it reported 1; corrected to match the actual `df.duplicated().sum()` result
 
 ---
@@ -109,9 +111,13 @@ Selected via 5-fold cross-validation over `k ∈ {1, 3, 5, ..., 21}` (CV accurac
 ## Limitations
 
 - **Feature scaling did not help on this dataset**: the project's own scaling-impact experiment found unscaled KNN slightly *outperforming* scaled KNN on the test set (100.0% vs. 93.3%). This is best read as noise from a 30-sample test set combined with Iris's four features already being measured in comparable units (cm) — not evidence that scaling is unimportant for KNN in general. On datasets with features spanning different orders of magnitude, scaling remains essential.
+
 - **Brute-force search is `O(N·d)` per prediction**: fine at Iris's scale (microseconds per prediction, confirmed empirically), but this implementation has no spatial indexing (KD-tree, ball tree) and would become impractical well before `N` reaches production scale.
+
 - **One duplicate row is present and deliberately retained**: two Virginica samples share identical measurements. This was a deliberate choice (plausible in real botanical data) rather than an oversight, but it does mean the duplicate could in principle land on both sides of the train/test split.
+
 - **Small, well-studied, single-domain dataset (150 samples)**: Iris is close to linearly separable and has no missing values or noisy features — it's an ideal dataset for illustrating an algorithm's mechanics, not a stress test of its robustness.
+
 - **Majority-vote ties are broken by proximity order, not by a documented explicit rule**: `Counter.most_common()` resolves ties by first-encountered order among the K nearest neighbors (i.e., favors the closer of two tied classes), which is a reasonable default but isn't a configurable option.
 
 ---

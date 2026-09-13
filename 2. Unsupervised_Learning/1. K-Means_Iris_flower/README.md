@@ -120,11 +120,17 @@ $K=3$ was selected to align with the three known species for external evaluation
 ## Limitations
 
 - **$K=3$ is a biologically-informed choice, not an unambiguous unsupervised one**: the silhouette curve often scores $K=2$ as well as or better than $K=3$, because *versicolor* and *virginica* are not cleanly separable by geometry alone.
+
 - **Standardisation did not clearly improve external metrics on this dataset**: the naturally larger-magnitude petal measurements are also the most species-informative ones, so scaling away that advantage traded ARI (0.716 → 0.645) for a small silhouette drop as well; standardisation is kept as the more defensible general-purpose default despite this.
+
 - **The mean is not a robust statistic**: K-Means assumes outliers are not overwhelmingly distorting the cluster centroid, an assumption untested here since Iris contains essentially no outliers.
+
 - **Convergence is only to a local optimum**: different random initialisations can converge to different final cluster configurations, quantified in the 30-seed stability experiment.
+
 - **The permutation problem constrains all label-based comparison**: cluster IDs are arbitrary, so any accuracy-style number requires solving an optimal mapping first (Hungarian algorithm); ARI and NMI remain the more fundamentally sound metrics.
+
 - **Ground-truth labels are a luxury**: they exist here purely because Iris is a labelled benchmark; genuine unsupervised problems in practice typically lack any external validation signal.
+
 - **Iris is small and unusually clean**: 150 rows, no missing values, no serious outliers, and perfectly balanced classes. Conclusions about robustness here should not be over-generalised to noisier, larger, or imbalanced production data.
 
 ---
