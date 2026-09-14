@@ -63,7 +63,7 @@ Key issues encountered and resolved during the project:
 
 ```bash
 git clone https://github.com/FranklinNwankwo/Implementing_Machine_learning_Algorithms_from_First_Principles.git
-cd "Implementing_Machine_learning_Algorithms_from_First_Principles/3. Reinforcement_Learning/3. PPO_lunarlander"
+cd "Implementing_Machine_learning_Algorithms_from_First_Principles/3. Reinforcement_Learning/3. PPO_LunarLander"
 ```
 
 ### 2. Create and activate a virtual environment (recommended)
