@@ -26,19 +26,19 @@ Each project follows the full ML pipeline: exploratory data analysis, feature en
 
 | # | Project | Algorithm | Dataset | Status |
 |---|---|---|---|---|
-| 1 | [K-Means Clustering](./2.%20Unsupervised_Learning/1.%20K-Means_Iris_flower/) | Custom Centroid Assignment & Update (Lloyd's Algorithm) | Iris Flower Dataset | Complete |
-|2 | [Hierarchical Clustering](./2.%20Unsupervised_Learning/2.%20Hierarchical_Clustering_mall_dataset/) | Custom Agglomerative Clustering (Ward Linkage via Lance-Williams Update) | Mall Customers Dataset | Complete|
-|3 | [Principal Component Analysis](./2.%20Unsupervised_Learning/3.%20PCA_wine_dataset/) | Custom PCA (Eigendecomposition via NumPy `eigh`) | Wine Dataset | Complete|
-|4 | [DBSCAN Clustering](./2.%20Unsupervised_Learning/4.%20DBSCAN_online_retail_dataset/) | Custom DBSCAN (Region Queries & Density-Reachability via Epsilon-Neighborhoods) | UCI Online Retail Dataset | Complete|
-|5 | [Gaussian Mixture Model](./2.%20Unsupervised_Learning/5.%20Gaussian_Mixture_Model_olivetti_faces/) | Custom GMM (Expectation-Maximization via NumPy/SciPy, Cholesky-based log-densities) | Olivetti Faces Dataset | Complete|
+| 01 | [K-Means Clustering](./2.%20Unsupervised_Learning/01.%20K-Means_Iris_flower/) | Custom Centroid Assignment & Update (Lloyd's Algorithm) | Iris Flower Dataset | Complete |
+| 02 | [Hierarchical Clustering](./2.%20Unsupervised_Learning/02.%20Hierarchical_Clustering_mall_dataset/) | Custom Agglomerative Clustering (Ward Linkage via Lance-Williams Update) | Mall Customers Dataset | Complete|
+| 03 | [Principal Component Analysis](./2.%20Unsupervised_Learning/03.%20PCA_wine_dataset/) | Custom PCA (Eigendecomposition via NumPy `eigh`) | Wine Dataset | Complete|
+| 04 | [DBSCAN Clustering](./2.%20Unsupervised_Learning/04.%20DBSCAN_online_retail_dataset/) | Custom DBSCAN (Region Queries & Density-Reachability via Epsilon-Neighborhoods) | UCI Online Retail Dataset | Complete|
+| 05 | [Gaussian Mixture Model](./2.%20Unsupervised_Learning/05.%20Gaussian_Mixture_Model_olivetti_faces/) | Custom GMM (Expectation-Maximization via NumPy/SciPy, Cholesky-based log-densities) | Olivetti Faces Dataset | Complete|
 
 ## REINFORCEMENT LEARNING
 
 | # | Project | Algorithm | Environment | Status |
 |---|---|---|---|---|
-| 1 | [Q-Learning](3.%20Reinforcement_Learning/1.%20Q-Learning_FrozenLake) | Q-Learning (Tabular, from scratch) | FrozenLake-v1 (Gymnasium) | Complete |
-| 2 | [Deep Q-Network](3.%20Reinforcement_Learning/2.%20Deep%20Q-Network_CartPole) | Deep Q-Network (DQN, from scratch in NumPy) | CartPole-v1 (Gymnasium) | Complete |
-| 3 | [PPO](3.%20Reinforcement_Learning/3.%20PPO_LunarLander) | Proximal Policy Optimization (PPO, from scratch in NumPy) | LunarLander-v3 (Gymnasium) | Complete |
+| 01 | [Q-Learning](3.%20Reinforcement_Learning/01.%20Q-Learning_FrozenLake) | Q-Learning (Tabular, from scratch) | FrozenLake-v1 (Gymnasium) | Complete |
+| 02 | [Deep Q-Network](3.%20Reinforcement_Learning/02.%20Deep%20Q-Network_CartPole) | Deep Q-Network (DQN, from scratch in NumPy) | CartPole-v1 (Gymnasium) | Complete |
+| 03 | [PPO](3.%20Reinforcement_Learning/03.%20PPO_LunarLander) | Proximal Policy Optimization (PPO, from scratch in NumPy) | LunarLander-v3 (Gymnasium) | Complete |
 
 ---
 
