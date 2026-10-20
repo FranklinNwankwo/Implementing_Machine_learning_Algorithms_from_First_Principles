@@ -30,10 +30,17 @@ Key issues encountered and resolved during the project:
 
 ---
 
+## Interactive Demo
+
+[`app/`](app/) contains a Streamlit app, the **Fraud Detection Decision Lab**, that runs both trained models live from their saved weights. You can move the decision threshold and watch precision, recall, F2 and cost respond; compare Model A and Model B side by side; and open any held-out transaction to see exactly which features pushed its score up or down. See [`app/README.md`](app/README.md) to run it locally or deploy it.
+
+---
+
 ## Repository Structure
 
 ```
 02. logistic_regression_credit_card_fraud/
+├── app/                  # Streamlit demo (see app/README.md)
 ├── data/
 │ └── .gitkeep
 ├── notebook/
