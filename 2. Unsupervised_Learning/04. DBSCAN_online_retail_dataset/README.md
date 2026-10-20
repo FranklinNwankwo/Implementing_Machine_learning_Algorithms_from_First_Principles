@@ -52,7 +52,7 @@ Key issues encountered and resolved during the project:
 
 - **Cluster IDs across independent DBSCAN runs are arbitrary permutations, so raw label equality would have been meaningless.** Adjusted Rand Index and Normalized Mutual Information (both label-permutation-invariant) were used instead to compare the custom implementation against sklearn; the noise mask, in contrast, *is* directly comparable since `-1` has a fixed meaning in both.
 
-- **K-Means/Agglomerative/GMM's higher silhouette scores at matched k did not mean they found a better segmentation.** All three score higher than DBSCAN's non-noise result at k=3, expected, since silhouette rewards forcing every point into its nearest centroid — exactly what DBSCAN's noise mechanism refuses to do. Low ARI against DBSCAN (well under 0.3 for all three) confirmed these algorithms weren't recovering the same structure under a different name; none of them has a way to say "482 of these customers don't fit either normal pattern."
+- **Silhouette scores don't separate these methods fairly.** At k=3, DBSCAN's non-noise silhouette (0.289) is actually *higher* than K-Means (0.272), Agglomerative (0.240) and GMM (0.149) — but only because DBSCAN is scored on the 3,853 clustered customers after setting aside its 482 hardest-to-place points as noise, while the other three are scored on all 4,335. Low ARI against DBSCAN (well under 0.3 for all three) confirmed these algorithms weren't recovering the same structure under a different name; none of them has a way to say "482 of these customers don't fit either normal pattern."
 
 ---
 
@@ -212,19 +212,21 @@ See `requirements.txt`. Core libraries used (pinned versions from the notebook's
 | Metric | Result |
 |---|---|
 | Clusters found | Match (2, both implementations) |
-| Adjusted Rand Index | Near 1.0 |
-| Normalized Mutual Information | Near 1.0 |
-| Noise-mask agreement | Near 100% of points |
+| Core points | 3,485 in both |
+| Adjusted Rand Index | 1.0000 |
+| Normalized Mutual Information | 1.0000 |
+| Noise-mask agreement | 100% of points |
 
-Any residual disagreement lives at cluster boundaries; points at exactly distance `eps`, where a `<=` vs. `<` floating-point convention can tip a borderline point either way, not in the bulk of either cluster.
+An exact match: the custom implementation uses the same self-inclusive `|N_eps(p)| >= min_samples` convention as sklearn, so core points, noise, and every cluster assignment agree.
 
-**Cross-algorithm benchmark** (K-Means / Agglomerative / GMM swept k = 2–6): silhouette peaks at **k=2** for all three algorithms, independently corroborating DBSCAN's 2-real-cluster structure. At a matched k=3, all three alternatives post a *higher* silhouette than DBSCAN's non-noise 2-cluster result, but Adjusted Rand Index against DBSCAN stays well under 0.3 for all three, they are not recovering the same structure under a different name, since none of them has a noise concept and all force the 482 high-volume outliers into whichever cluster is geometrically nearest.
+**Cross-algorithm benchmark** (K-Means / Agglomerative / GMM swept k = 2–6): silhouette peaks at **k=2** for all three algorithms, independently corroborating DBSCAN's 2-real-cluster structure. At a matched k=3, DBSCAN's non-noise silhouette (0.289) is slightly higher than all three (0.272 / 0.240 / 0.149), though that comparison flatters DBSCAN because its 482 noise points are excluded from its score. Adjusted Rand Index against DBSCAN stays well under 0.3 for all three, they are not recovering the same structure under a different name, since none of them has a noise concept and all force the 482 high-volume outliers into whichever cluster is geometrically nearest.
 
 **Stability & sensitivity:**
 
 | Check | Result |
 |---|---|
-| `eps` ± 0.05–0.1, `min_samples` ± 2 around the chosen point | ARI vs. chosen configuration stays reasonably high, not a knife-edge choice |
+| `eps` 0.65–0.75, `min_samples` 8–12 | ARI vs. chosen configuration 0.92–0.98 — stable to small perturbations |
+| `eps` = 0.80 | Structure changes abruptly (ARI 0.19–0.24; a single cluster at `min_samples` 10–12) — the result sits close to a cliff, the single-global-`eps` limitation in practice |
 | Log-transformed vs. raw features, same `eps`/`min_samples` | Visibly different segmentations — scaling/transformation is not cosmetic for DBSCAN |
 | Cancellation counts by segment | Not evenly distributed across groups — flagged for follow-up, deliberately kept out of the primary feature set |
 
@@ -248,9 +250,9 @@ Two independent DBSCAN runs can produce identical clusterings with completely di
 
 With skewness up to 41.45 on AverageOrderValue, a handful of extreme customers would have dominated every Euclidean distance calculation before scaling ever got a chance to matter. Running the *same* `eps`/`min_samples` on raw vs. log-transformed features and getting a materially different segmentation turned "log-transform skewed features" from textbook advice into a directly observed effect.
 
-5. **A Higher Silhouette Score Doesn't Automatically Mean a Better Segmentation.**
+5. **A Silhouette Score Is Only Comparable When Every Method Is Scored on the Same Points.**
 
-K-Means, Agglomerative, and GMM all posted higher silhouette scores than DBSCAN's non-noise result at a matched k, which makes sense mechanically (silhouette rewards forcing every point into its nearest centroid) but would be the wrong metric to declare them the "better" clustering here. Their low ARI against DBSCAN, and the fact that none of them has any way to flag the 482-customer outlier group as behaviorally distinct, is the more important comparison for the actual business question.
+DBSCAN's non-noise silhouette (0.289) edged out K-Means, Agglomerative, and GMM at a matched k, but DBSCAN was scored only on the customers it chose to cluster, after discarding its 482 hardest points as noise, while the others were scored on everyone. That makes silhouette the wrong metric to declare any of them the "better" clustering here. Their low ARI against DBSCAN, and the fact that none of them has any way to flag the 482-customer outlier group as behaviorally distinct, is the more important comparison for the actual business question.
 
 6. **The k-Distance Elbow Is a Starting Hypothesis, Not a Guaranteed Optimum.**
 

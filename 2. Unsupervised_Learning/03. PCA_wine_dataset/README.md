@@ -205,23 +205,23 @@ Effectively perfect agreement once sign ambiguity and the standardization-ddof c
 
 **Reconstruction error vs. number of components retained:**
 
-| k | MSE | RMSE |
-|---|---|---|
-| 1 | 4,665.5 | 68.30 |
-| 2 | 2,139.7 | 46.26 |
-| 3 | 1,962.6 | 44.30 |
-| 4 | 1,585.4 | 39.82 |
-| 5 | 1,417.0 | 37.64 |
-| 6 | 1,347.2 | 36.70 |
-| 7 | 1,321.6 | 36.35 |
-| 8 | 1,283.3 | 35.82 |
-| 9 | 556.5 | 23.59 |
-| 10 | 506.4 | 22.50 |
-| 11 | 8.29 | 2.88 |
-| 12 | 0.176 | 0.419 |
-| 13 | ~0 | ~3.85e-14 |
+| k | MSE (standardized) | Variance discarded | MSE (raw units) | RMSE (raw units) |
+|---|---|---|---|---|
+| 1 | 0.634 | 0.638 | 4,665.5 | 68.30 |
+| 2 | 0.443 | 0.446 | 2,139.7 | 46.26 |
+| 3 | 0.333 | 0.335 | 1,962.6 | 44.30 |
+| 4 | 0.263 | 0.264 | 1,585.4 | 39.82 |
+| 5 | 0.197 | 0.198 | 1,417.0 | 37.64 |
+| 6 | 0.148 | 0.149 | 1,347.2 | 36.70 |
+| 7 | 0.106 | 0.107 | 1,321.6 | 36.35 |
+| 8 | 0.079 | 0.080 | 1,283.3 | 35.82 |
+| 9 | 0.057 | 0.058 | 556.5 | 23.59 |
+| 10 | 0.038 | 0.038 | 506.4 | 22.50 |
+| 11 | 0.021 | 0.021 | 8.29 | 2.88 |
+| 12 | 0.008 | 0.008 | 0.176 | 0.419 |
+| 13 | ~0 | 0 | ~0 | ~0 |
 
-Reconstruction error falls monotonically as more components are retained, reaching numerical zero at k=13 — the mirror image of the cumulative explained-variance curve.
+In standardized space — the space PCA optimizes — reconstruction MSE equals the share of variance discarded at every k (up to the ddof factor (n−1)/n), exactly as the Eckart–Young theorem predicts. In raw units the picture is distorted by scale: Proline's variance (~98,600) dwarfs every other feature, so raw MSE mostly measures how well *Proline* is reconstructed — it plateaus around 1,300 from k=5 to 8, then drops sharply at k=9 and k=11, the components with the largest Proline loadings. Reconstruction quality should be judged in the space the model optimizes.
 
 **Downstream clustering — full standardized space vs. PCA subspace (K-Means / GMM, k=3, scored against withheld cultivar labels):**
 
@@ -230,7 +230,7 @@ Reconstruction error falls monotonically as more components are retained, reachi
 | Full standardized (13D) | 0.285 | 0.897 | 0.876 | 0.285 | 0.897 | 0.876 |
 | PCA subspace (2D) | **0.561** | 0.895 | 0.882 | **0.559** | **0.914** | 0.885 |
 
-Cluster *separability* (Silhouette) nearly doubles in the 2D PCA subspace while agreement with the true labels (ARI/NMI) holds steady or improves slightly — the discarded 11 dimensions were mostly noise for this task, not signal.
+Agreement with the true labels (ARI/NMI) holds steady or improves slightly in the 2D PCA subspace, so the discarded 11 dimensions carried little cultivar-relevant signal. The higher silhouette in 2D should not be read as better clustering: silhouette is computed in a different space in each row, and dropping 11 dimensions mechanically shrinks within-cluster distances. ARI/NMI is the comparable metric here.
 
 **Bootstrap stability of PC1's direction** (200 resamples, cosine similarity to the full-dataset PC1):
 

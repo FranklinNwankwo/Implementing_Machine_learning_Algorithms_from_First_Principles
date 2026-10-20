@@ -20,7 +20,7 @@ This project walks through the full supervised learning pipeline:
 - **Exploratory Data Analysis (EDA)** — class balance, per-class feature distributions (histograms, boxplots, violin plots, KDE overlap), pairplot, correlation heatmap
 - **Preprocessing** — stratified train/test split, and a manual standardization class (`z = (x - μ) / σ`, statistics fit on the training split only, no `sklearn.preprocessing`)
 - **Model Implementation** — a `KNNClassifier` (Euclidean/Manhattan/Minkowski distance, brute-force neighbor search, majority-vote prediction, a `get_neighbors()` diagnostic utility) built from scratch with NumPy
-- **Hyperparameter Sensitivity Analysis** — a `K` sweep (1–21) evaluated via 5-fold cross-validation, checked against the classic bias-variance narrative (K=1 overfits, large K underfits)
+- **Hyperparameter Sensitivity Analysis** — a `K` sweep (1–21) evaluated via 5-fold cross-validation, read against the classic bias-variance narrative, where the textbook pattern only partly appears on 150 flowers (see What I Learned)
 - **Validation** — matched-hyperparameter comparison against `sklearn.neighbors.KNeighborsClassifier` with `algorithm='brute'`, including a full prediction-by-prediction agreement check
 - **Comparative Modeling** — benchmarked against sklearn's KNN, Logistic Regression, Decision Tree, Random Forest, SVM (RBF), Gradient Boosting, and XGBoost
 - **Diagnostics** — misclassified-sample inspection with per-error vote breakdowns, a decision-boundary visualization in petal space, and an empirical prediction-time-vs-N timing study confirming `O(N)` complexity
@@ -160,7 +160,7 @@ The custom implementation ties for 3rd of 8 models on test accuracy, and **match
 
 1. **A Model With No Training Phase Still Has a Model Selection Problem.**
 
-KNN has no loss function to minimize during `fit()` — but choosing `k` is exactly as consequential as choosing any other model's hyperparameters, and it has the same bias-variance shape as everything else in this repository: `k=1` memorizes the training set (100% train accuracy, visibly worse test accuracy), while large `k` smooths the decision boundary until it collapses toward the majority class. Watching that curve appear from a plain cross-validation sweep — with no actual training happening anywhere — was a clean illustration that "hyperparameter tuning" and "training" are separable ideas.
+KNN has no loss function to minimize during `fit()` — but choosing `k` is exactly as consequential as choosing any other model's hyperparameters, and it has the same bias-variance shape as everything else in this repository: `k=1` memorizes the training set (100% train accuracy). On this 30-flower test split it actually scored *higher* than `k=3` (96.7% vs. 93.3%, a one-flower difference), so its variance shows up in cross-validation instead: a lower CV mean (0.950) and one of the widest fold spreads (±0.031). Large `k` smooths the boundary, and CV accuracy drifts down to 0.917 by `k=19–21`. Watching that curve appear from a plain cross-validation sweep — with no actual training happening anywhere — was a clean illustration that "hyperparameter tuning" and "training" are separable ideas.
 
 2. **Matching Sklearn Exactly Is a Stronger Signal for a Lazy Learner Than for a Trained One.**
 
