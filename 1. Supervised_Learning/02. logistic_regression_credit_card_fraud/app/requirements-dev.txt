@@ -1,0 +1,4 @@
+# Extra dependencies for rebuilding artifacts and running the tests
+-r requirements.txt
+scikit-learn>=1.5   # tests only: cross-checks the from-scratch metrics
+pytest>=8

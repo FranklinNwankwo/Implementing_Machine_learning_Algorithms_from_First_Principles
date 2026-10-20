@@ -17,7 +17,7 @@ This project walks through the full supervised learning pipeline:
 - **Model Implementation** — a full CART-style tree (`Node` class, recursive Gini-impurity splitting, threshold-midpoint search, `predict_proba`, and Gini-reduction-based feature importances) built from scratch with NumPy.
 - **Hyperparameter Sensitivity Analysis** — `max_depth`, `min_samples_split`, and `min_samples_leaf` sweeps, plus 5-fold stratified cross-validation for stability.
 - **Comparison Models** — benchmarked against `sklearn`'s `DecisionTreeClassifier`, Random Forest, XGBoost, Logistic Regression, and SVM (RBF).
-- **Final Evaluation** — ROC and Precision-Recall curves, confusion matrices, cost-complexity (post-)pruning, and decision-threshold optimisation for recall.
+- **Final Evaluation** — ROC and Precision-Recall curves, confusion matrices, cost-complexity (post-)pruning, and decision-threshold optimisation for recall (thresholds chosen on validation).
 
 Key issues encountered and resolved during the project:
 
@@ -151,9 +151,9 @@ Random Forest and XGBoost both reach 1.0000 ROC-AUC, and Random Forest gets zero
 
 Logistic Regression hitting 1.0000 on every single metric is a good result, but with only ~85 test samples and strong class separability in this dataset, a perfect score is at least as likely to reflect the small evaluation set as it is to reflect flawless generalisation. Treating a perfect number as something to interrogate rather than something to simply report was a useful instinct to build here, especially with a small clinical dataset.
 
-8. **Threshold Tuning Applies to Trees Just as Much as to Logistic Regression.**
+8. **Threshold Tuning Is Only as Fine-Grained as the Model's Scores — and Must Be Chosen on Validation.**
 
-`predict_proba()` on the scratch tree returns the leaf's training class distribution, which meant the same threshold-sweep-for-recall approach used in earlier projects (in the fraud-detection logistic regression notebook) applied directly here too. Lowering the operating threshold below 0.5 trades some precision for higher recall, the right trade in a screening context where a missed malignancy is far costlier than a false alarm that gets ruled out on follow-up.
+`predict_proba()` on the scratch tree returns the leaf's training class distribution, so I applied the same threshold sweep used in the fraud-detection notebook. My first version swept thresholds on the test set and reported the best one there, which is selection on the test set. Redone properly (thresholds chosen on validation with a tree fitted on train only, then applied once to test), it showed something more useful: the tree's validation scores take only 8 distinct values, the best-F1 threshold is simply the default 0.5, and the only threshold reaching 95% recall on validation is τ = 0, which flags every patient. A single tree can't trade precision for recall smoothly; a screening system that needs a tunable operating point should use a model with continuous scores.
 
 9. **Feature Importance Cross-Validated Against a Second Model Is More Trustworthy Than Feature Importance Alone.**
 

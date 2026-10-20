@@ -121,6 +121,8 @@ Chosen for solid performance within a modest compute budget (~2 minutes for all 
 
 - **Ablation and hyperparameter-sensitivity runs used a single seed each**, for compute-budget reasons, unlike the 5-seed main evaluation — their qualitative direction is informative, but exact magnitudes carry more sampling noise than the main result.
 
+- **Results are bit-for-bit reproducible only on the same platform and library versions.** With identical seeds, seeds 0, 1, 3 and 4 reproduce exactly across machines, but seed 2 can diverge partway through training from tiny floating-point differences that compound over 350 episodes: one Windows run gave seed 2 a mean of 348.8 (5-seed mean 397.7) instead of 483.8 (5-seed mean 424.7). The per-seed spread above is the more reliable summary than the pooled mean.
+
 - **No established framework-based DQN benchmark was run** (see *Key issues* above) — the random and heuristic baselines anchor the low and high ends of "sane" CartPole performance instead.
 
 - **CartPole is a low-dimensional, fully-observable, stationary benchmark.** None of these results should be read as evidence this implementation is ready for real robotic or physical control systems, which involve partial observability, safety constraints, continuous actions, and non-stationary dynamics this project does not address.
