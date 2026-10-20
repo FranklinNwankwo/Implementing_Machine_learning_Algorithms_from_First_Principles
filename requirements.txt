@@ -1,0 +1,7 @@
+# Dependencies for the Streamlit app deployed from streamlit_app.py
+# (fraud-detection decision lab). Each notebook project has its own
+# requirements.txt in its folder.
+streamlit>=1.50
+numpy>=2.0
+pandas>=2.2
+plotly>=5.24

@@ -18,7 +18,7 @@ from pathlib import Path
 import numpy as np
 
 ART_DIR = Path(__file__).resolve().parent.parent / "artifacts"
-MODEL_LABELS = {"A": "Model A · Weighted BCE", "B": "Model B · SMOTE"}
+MODEL_LABELS = {"A": "Model A (weighted BCE)", "B": "Model B (SMOTE)"}
 
 
 def sigmoid(z: np.ndarray) -> np.ndarray:

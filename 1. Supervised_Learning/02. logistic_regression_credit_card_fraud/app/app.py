@@ -11,9 +11,11 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
+import plotly.io as pio
 import streamlit as st
 
 from fraudlab import metrics as M
+from fraudlab.guilloche import band_svg, rosette_svg
 from fraudlab.model import (
     MODEL_LABELS,
     amounts_from_features,
@@ -29,24 +31,70 @@ st.set_page_config(
     initial_sidebar_state="auto",
 )
 
-# Colours mirror the notebook's palette: blue = legitimate / Model A, pink = fraud / Model B.
-C_LEGIT, C_FRAUD = "#4361EE", "#F72585"
-C_MODEL = {"A": "#4361EE", "B": "#F72585"}
-C_GOLD, C_TEAL, C_MUTED = "#D4AF37", "#2A9D8F", "#8A93A6"
+# "Security print" palette (see .streamlit/config.toml). Every colour has one job:
+#   paper / ink        page ground and text
+#   engraving green    controls and the guilloché line-work
+#   stamp red          fraud, everywhere it appears
+#   sage               legitimate transactions (quiet, so fraud stands out)
+#   cobalt / amber     Model A / Model B
+#   ink                the current threshold, so it never competes with a model colour
+C_PAPER, C_PAPER_2, C_INK, C_RULE = "#F2F4EF", "#E3E9E1", "#12302E", "#CBD3CA"
+C_ENGRAVE, C_FRAUD, C_LEGIT, C_MUTED = "#2D6A5F", "#B3263E", "#9DB3AA", "#6E807B"
+C_MODEL = {"A": "#2B4C8C", "B": "#B9822A"}
+C_TAU = C_INK
 REPO_URL = "https://github.com/FranklinNwankwo/Implementing_Machine_learning_Algorithms_from_First_Principles"
 NB_PATH = "1. Supervised_Learning/02. logistic_regression_credit_card_fraud/notebook"
 
+# One Plotly template for every chart: same type, same rules, transparent ground.
+pio.templates["security_print"] = go.layout.Template(layout=go.Layout(
+    font=dict(family="IBM Plex Sans, system-ui, sans-serif", color=C_INK, size=12.5),
+    title=dict(font=dict(family="IBM Plex Serif, Georgia, serif", size=16, color=C_INK), x=0, xanchor="left"),
+    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+    colorway=[C_MODEL["A"], C_MODEL["B"], C_ENGRAVE, C_FRAUD, C_MUTED],
+    xaxis=dict(gridcolor="#DCE3DB", zerolinecolor=C_RULE, linecolor=C_RULE, ticks="outside", tickcolor=C_RULE,
+               title=dict(font=dict(size=12.5, color=C_MUTED))),
+    yaxis=dict(gridcolor="#DCE3DB", zerolinecolor=C_RULE, linecolor=C_RULE, ticks="outside", tickcolor=C_RULE,
+               title=dict(font=dict(size=12.5, color=C_MUTED))),
+    legend=dict(font=dict(size=12), bgcolor="rgba(0,0,0,0)"),
+    hoverlabel=dict(font=dict(family="IBM Plex Sans, sans-serif"), bgcolor="#FFFFFF", bordercolor=C_RULE),
+))
+pio.templates.default = "security_print"
+
 st.markdown(
-    """
+    f"""
     <style>
-      .block-container {padding-top: 1.6rem; max-width: 1400px;}
-      div[data-testid="stMetricValue"] {font-size: 1.55rem;}
-      .note {color: #8A93A6; font-size: 0.86rem;}
-      .pill {display:inline-block; padding:2px 10px; border-radius:999px; font-size:0.8rem;
-             font-weight:600; margin-right:6px;}
-      .pill-fraud {background:#F7258522; color:#F72585;}
-      .pill-legit {background:#4361EE22; color:#4361EE;}
-      .pill-flag {background:#D4AF3726; color:#B8941F;}
+      .block-container {{padding-top: 1.2rem; max-width: 1360px;}}
+      /* tabular figures so metrics, tables and captions line up */
+      [data-testid="stMetricValue"], [data-testid="stMetricDelta"], .tnum {{font-variant-numeric: tabular-nums;}}
+      [data-testid="stMetricValue"] {{font-size: 1.5rem; letter-spacing: -0.01em;}}
+      [data-testid="stMetricLabel"] p {{color: {C_MUTED}; font-size: 0.86rem;}}
+      .note {{color: {C_MUTED}; font-size: 0.86rem; line-height: 1.5;}}
+
+      /* header: title and lede on the left, engraved rosette on the right, banknote band below */
+      .hero {{display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2rem; align-items: center;}}
+      .hero h1 {{font-family: "IBM Plex Serif", Georgia, serif; font-weight: 600; font-size: 2.6rem;
+                line-height: 1.08; letter-spacing: -0.015em; margin: 0 0 0.6rem; padding: 0; color: {C_INK};
+                text-wrap: balance;}}
+      .hero p {{max-width: 64ch; font-size: 1.02rem; line-height: 1.6; margin: 0; color: #2E4744;}}
+      .hero .rosette {{line-height: 0; margin-right: 0.5rem;}}
+      .band {{line-height: 0; margin: 1.1rem 0 1.4rem;}}
+      @media (max-width: 760px) {{
+        .block-container {{padding-top: 3.6rem;}}
+        .hero {{grid-template-columns: 1fr;}}
+        .hero .rosette {{display: none;}}
+        .hero h1 {{font-size: 2rem;}}
+      }}
+
+      /* tabs: ink underline on the active tab, no colour wash */
+      .stTabs [data-baseweb="tab-list"] {{gap: 1.6rem; border-bottom: 1px solid {C_RULE};}}
+      .stTabs [data-baseweb="tab"] {{padding-left: 0; padding-right: 0; font-weight: 500;}}
+
+      /* status pills in the transaction explorer */
+      .pill {{display:inline-block; padding:1px 9px; border-radius:3px; font-size:0.8rem;
+             font-weight:600; margin-right:6px; border:1px solid currentColor;}}
+      .pill-fraud {{color:{C_FRAUD}; background:#B3263E12;}}
+      .pill-legit {{color:{C_ENGRAVE}; background:#2D6A5F10;}}
+      .pill-flag  {{color:{C_INK}; background:#12302E0D;}}
     </style>
     """,
     unsafe_allow_html=True,
@@ -146,7 +194,7 @@ with st.sidebar:
     )
     X_eval, y_eval = data.split(split)
     n_eval, n_fraud_eval = len(y_eval), int(y_eval.sum())
-    st.caption(f"{n_eval:,} transactions · {n_fraud_eval} frauds ({100 * n_fraud_eval / n_eval:.3f}%)")
+    st.caption(f"{n_eval:,} transactions, {n_fraud_eval} of them fraud ({100 * n_fraud_eval / n_eval:.3f}%)")
 
     st.divider()
     st.subheader("Cost assumptions")
@@ -176,12 +224,22 @@ loss_eval = M.fraud_loss_per_sample(amounts_eval, fixed_fee, include_amount)
 # ─────────────────────────────────────────────────────────────────────────────
 # Header
 # ─────────────────────────────────────────────────────────────────────────────
-st.title("Fraud Detection Decision Lab")
+_fraud_pct = 100 * (meta["train_fraud"] + meta["val_fraud"] + meta["test_fraud"]) / meta["n_rows_after_dedup"]
 st.markdown(
-    "Logistic regression **written from scratch** (NumPy gradient descent, from-scratch SMOTE) on "
-    f"{meta['n_rows_after_dedup']:,} European card transactions, of which only "
-    f"{100 * (meta['train_fraud'] + meta['val_fraud'] + meta['test_fraud']) / meta['n_rows_after_dedup']:.2f}% are fraud. "
-    "The model only produces a score; **the threshold is a business decision**. Use this lab to see what each choice costs."
+    f"""
+    <div class="hero">
+      <div>
+        <h1>Fraud Detection Decision Lab</h1>
+        <p>Two logistic regression models, written from scratch in NumPy, score
+        {meta['n_rows_after_dedup']:,} European card transactions, of which {_fraud_pct:.2f}% are fraud.
+        A model only produces a score; where to draw the line is a business decision.
+        Move the threshold to see what each choice catches, misses and costs.</p>
+      </div>
+      <div class="rosette">{rosette_svg(C_ENGRAVE, 200)}</div>
+    </div>
+    <div class="band">{band_svg(C_ENGRAVE)}</div>
+    """,
+    unsafe_allow_html=True,
 )
 
 kcols = st.columns(4)
@@ -190,14 +248,14 @@ for col, k in zip(kcols[:2], ["A", "B"]):
     c = M.counts_at(data.y_test, s, models[k].tau)
     sm = M.summary(c)
     col.metric(
-        f"Model {k} · test recall at τ*",
+        f"Model {k}: frauds caught on test at τ*",
         f"{c.tp}/{c.tp + c.fn} frauds ({fmt_pct(sm['recall'])})",
         help=f"Test set, τ* = {models[k].tau:.5f} chosen on validation by F2.",
     )
-    col.caption(f"{c.fp} false alarms · precision {fmt_pct(sm['precision'])} · F2 {sm['fbeta']:.3f}")
-kcols[2].metric("Exact AUC-PR (test)", f"A {exact_curves('A', 'test')['ap']:.3f} · B {exact_curves('B', 'test')['ap']:.3f}",
+    col.caption(f"{c.fp} false alarms, precision {fmt_pct(sm['precision'])}, F2 {sm['fbeta']:.3f}")
+kcols[2].metric("Exact AUC-PR (test)", f"A {exact_curves('A', 'test')['ap']:.3f} / B {exact_curves('B', 'test')['ap']:.3f}",
                 help="Average precision over every distinct threshold. Random guessing scores the fraud rate (≈0.0016).")
-kcols[3].metric("ROC-AUC (test)", f"A {exact_curves('A', 'test')['auc']:.3f} · B {exact_curves('B', 'test')['auc']:.3f}",
+kcols[3].metric("ROC-AUC (test)", f"A {exact_curves('A', 'test')['auc']:.3f} / B {exact_curves('B', 'test')['auc']:.3f}",
                 help="Looks excellent for both — but ROC is flattered by 42,000+ easy negatives. AUC-PR is the honest metric here.")
 
 tab_thr, tab_cmp, tab_txn, tab_hood = st.tabs(
@@ -214,17 +272,17 @@ def base_layout(fig: go.Figure, title: str, height: int = 380) -> go.Figure:
         title=dict(text=title, font=dict(size=15)),
         height=height,
         margin=dict(l=10, r=10, t=50, b=10),
-        legend=dict(orientation="h", yanchor="top", y=-0.2, xanchor="left", x=0),
+        legend=dict(orientation="h", yanchor="top", y=-0.3, xanchor="left", x=0),
     )
     return fig
 
 
 def confusion_fig(c: M.Counts) -> go.Figure:
-    text = [[f"TN<br><b>{c.tn:,}</b>", f"FP · false alarm<br><b>{c.fp:,}</b>"],
-            [f"FN · missed fraud<br><b>{c.fn:,}</b>", f"TP · fraud caught<br><b>{c.tp:,}</b>"]]
+    text = [[f"Correctly passed<br><b>{c.tn:,}</b>", f"False alarms<br><b>{c.fp:,}</b>"],
+            [f"Missed fraud<br><b>{c.fn:,}</b>", f"Fraud caught<br><b>{c.tp:,}</b>"]]
     fig = go.Figure(go.Heatmap(z=[[0, 1], [1, 0]], text=text, texttemplate="%{text}", showscale=False,
-                               colorscale=[[0, "#EEF1FB"], [1, "#FDE7F1"]], hoverinfo="skip",
-                               textfont=dict(size=15, color="#16202B")))
+                               colorscale=[[0, "#E2EBE5"], [1, "#F4DEE2"]], hoverinfo="skip",
+                               textfont=dict(size=15, color=C_INK)))
     fig.update_xaxes(tickvals=[0, 1], ticktext=["Predicted legitimate", "Predicted fraud"], side="top")
     fig.update_yaxes(tickvals=[0, 1], ticktext=["Actually legitimate", "Actually fraud"], autorange="reversed")
     return base_layout(fig, "Confusion matrix", height=330)
@@ -250,9 +308,9 @@ def pr_fig(curves: dict[str, dict], points: dict[str, tuple[float, float, str]],
 def score_hist_fig(scores: np.ndarray, y: np.ndarray, tau: float) -> go.Figure:
     bins = dict(start=0, end=1.0001, size=0.02)
     fig = go.Figure()
-    fig.add_trace(go.Histogram(x=scores[y == 0], xbins=bins, name="Legitimate", marker_color=C_LEGIT, opacity=0.7))
-    fig.add_trace(go.Histogram(x=scores[y == 1], xbins=bins, name="Fraud", marker_color=C_FRAUD, opacity=0.85))
-    fig.add_vline(x=tau, line=dict(color=C_GOLD, width=3), annotation_text=f"τ = {tau:.5f}")
+    fig.add_trace(go.Histogram(x=scores[y == 0], xbins=bins, name="Legitimate", marker_color=C_LEGIT, opacity=0.9))
+    fig.add_trace(go.Histogram(x=scores[y == 1], xbins=bins, name="Fraud", marker_color=C_FRAUD, opacity=0.9))
+    fig.add_vline(x=tau, line=dict(color=C_TAU, width=2), annotation_text=f"τ = {tau:.5f}")
     fig.update_layout(barmode="overlay")
     fig.update_yaxes(type="log", title="Transactions (log scale)")
     fig.update_xaxes(title="Model score P(fraud | x)")
@@ -293,14 +351,14 @@ with tab_thr:
     with top[1]:
         r1 = st.columns(3)
         r1[0].metric("Frauds caught (recall)", f"{c.tp} of {c.tp + c.fn}",
-                     f"{fmt_pct(sm['recall'])} · 95% CI {fmt_pct(rec_ci[0], 0)}–{fmt_pct(rec_ci[1], 0)}", delta_color="off", delta_arrow="off")
+                     f"{fmt_pct(sm['recall'])}, 95% CI {fmt_pct(rec_ci[0], 0)}–{fmt_pct(rec_ci[1], 0)}", delta_color="off", delta_arrow="off")
         r1[1].metric("Alerts that are fraud (precision)", fmt_pct(sm["precision"]),
                      f"95% CI {fmt_pct(prec_ci[0], 0)}–{fmt_pct(prec_ci[1], 0)}" if c.alerts else "no alerts",
                      delta_color="off", delta_arrow="off")
         r1[2].metric("F2 score", f"{sm['fbeta']:.3f}", "weights recall 2× precision", delta_color="off", delta_arrow="off")
         r2 = st.columns(3)
         r2[0].metric("Alerts per 10,000 transactions", f"{10000 * sm['alert_rate']:.1f}",
-                     f"{c.alerts:,} alerts · {c.fp:,} false", delta_color="off", delta_arrow="off")
+                     f"{c.alerts:,} alerts, {c.fp:,} false", delta_color="off", delta_arrow="off")
         r2[1].metric("False alarm rate (FPR)", f"{100 * sm['fpr']:.3f}%", f"1 in {1 / sm['fpr']:,.0f} legit flagged"
                      if sm["fpr"] else "none", delta_color="off", delta_arrow="off")
         saving = cost["flag_nothing"] - cost["total"]
@@ -320,29 +378,29 @@ with tab_thr:
         st.plotly_chart(confusion_fig(c), key="cm")
     with g2:
         cv = exact_curves(mk, split)
-        pts = {f"Current τ = {tau:.5f}": (sm["recall"], 1.0 if np.isnan(sm["precision"]) else sm["precision"], C_GOLD)}
+        pts = {f"Current τ = {tau:.5f}": (sm["recall"], 1.0 if np.isnan(sm["precision"]) else sm["precision"], C_TAU)}
         st.plotly_chart(pr_fig({mk: cv}, pts, n_fraud_eval / n_eval), key="pr")
 
     g3, g4 = st.columns(2)
     with g3:
         st.plotly_chart(score_hist_fig(s_eval, y_eval, tau), key="hist")
-        st.caption("Everything right of the gold line is flagged. Pink bars left of it are missed frauds; "
-                   "blue bars right of it are false alarms.")
+        st.caption("Everything right of the dark line is flagged. Red bars left of it are missed frauds; "
+                   "green-grey bars right of it are false alarms.")
     with g4:
         cc = M.cost_curve(y_eval, s_eval, loss_eval, review_cost)
         x_alerts = np.maximum(cc["alerts"], 0.8)  # place "flag nothing" on a log axis
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=x_alerts, y=cc["cost"], mode="lines", name="Total cost",
-                                 line=dict(color=C_TEAL, width=2.5)))
+                                 line=dict(color=C_ENGRAVE, width=2.5)))
         fig.add_trace(go.Scatter(x=x_alerts, y=cc["missed_loss"], mode="lines", name="Missed-fraud loss",
                                  line=dict(color=C_FRAUD, width=1.5, dash="dot")))
         fig.add_trace(go.Scatter(x=x_alerts, y=cc["review"], mode="lines", name="Review cost",
-                                 line=dict(color=C_LEGIT, width=1.5, dash="dot")))
+                                 line=dict(color=C_MUTED, width=1.5, dash="dot")))
         fig.add_trace(go.Scatter(x=[max(c.alerts, 0.8)], y=[cost["total"]], mode="markers", name="Current τ",
-                                 marker=dict(size=13, color=C_GOLD, symbol="diamond", line=dict(width=2, color="white"))))
+                                 marker=dict(size=13, color=C_TAU, symbol="diamond", line=dict(width=2, color="white"))))
         imin = int(np.argmin(cc["cost"]))
         fig.add_trace(go.Scatter(x=[x_alerts[imin]], y=[cc["cost"][imin]], mode="markers",
-                                 name=f"Cheapest on this split", marker=dict(size=10, color="#16202B", symbol="x")))
+                                 name=f"Cheapest on this split", marker=dict(size=10, color=C_ENGRAVE, symbol="x")))
         fig.update_xaxes(type="log", title="Number of alerts raised (log scale) — lower threshold → more alerts")
         fig.update_yaxes(title="€ on this split")
         st.plotly_chart(base_layout(fig, "Cost vs. alert volume"), key="cost")
@@ -442,8 +500,8 @@ with tab_txn:
     else:
         pick = c2.selectbox(
             f"Transaction ({len(idx)} in group, sorted by Model A score)", idx,
-            format_func=lambda i: (f"#{i} · €{amounts_eval[i]:,.2f} · "
-                                   f"{'FRAUD' if y_eval[i] else 'legit'} · A {sA[i]:.4f} · B {sB[i]:.4f}"),
+            format_func=lambda i: (f"#{i}, €{amounts_eval[i]:,.2f}, {'fraud' if y_eval[i] else 'legitimate'}, "
+                                   f"scores A {sA[i]:.4f} / B {sB[i]:.4f}"),
         )
         explain = c3.radio("Explain with", ["A", "B"], format_func=lambda k: MODEL_LABELS[k], horizontal=False)
 
@@ -458,7 +516,7 @@ with tab_txn:
         for col, k, s_k, t_k, f_k in [(info[1], "A", sA, tA, fA), (info[2], "B", sB, tB, fB)]:
             pct_rank = 100 * np.mean(s_k <= s_k[pick])
             col.markdown(
-                f"**{MODEL_LABELS[k]}**<br>score {s_k[pick]:.6f} · τ {t_k:.5f}<br>"
+                f"**{MODEL_LABELS[k]}**<br>score {s_k[pick]:.6f}, τ {t_k:.5f}<br>"
                 f"<span class='pill {'pill-flag' if f_k[pick] else 'pill-legit'}'>"
                 f"{'Flagged' if f_k[pick] else 'Not flagged'}</span> "
                 f"<span class='note'>higher than {pct_rank:.2f}% of transactions</span>",
@@ -480,24 +538,26 @@ with tab_txn:
         values = [m.bias] + [float(contrib[i]) for i in top_k] + [float(rest)]
         fig = go.Figure(go.Waterfall(
             x=labels + ["Logit"], y=values + [0], measure=["relative"] * len(values) + ["total"],
-            connector=dict(line=dict(color="#C8CDD8")),
-            increasing=dict(marker=dict(color=C_FRAUD)), decreasing=dict(marker=dict(color=C_LEGIT)),
-            totals=dict(marker=dict(color=C_GOLD)),
+            connector=dict(line=dict(color=C_RULE)),
+            increasing=dict(marker=dict(color=C_FRAUD)), decreasing=dict(marker=dict(color=C_ENGRAVE)),
+            totals=dict(marker=dict(color=C_TAU)),
             text=[f"{v:+.2f}" for v in values] + [f"{logit:+.2f}"], textposition="outside",
         ))
         t_cur = tA if explain == "A" else tB
         if 0 < t_cur < 1:
             thr_logit = np.log(t_cur / (1 - t_cur))
-            fig.add_hline(y=thr_logit, line=dict(color=C_MUTED, dash="dash"),
-                          annotation_text=f"current threshold τ = {t_cur:.5f} in log-odds ({thr_logit:+.2f}); "
-                                          f"the transaction is flagged if the gold bar ends above this line")
+            fig.add_hline(y=thr_logit, line=dict(color=C_MUTED, dash="dash"))
+            fig.add_annotation(xref="paper", x=0, yref="y", y=thr_logit, yshift=10, xanchor="left", showarrow=False,
+                               text=f"threshold τ = {t_cur:.5f}  (log-odds {thr_logit:+.2f})",
+                               font=dict(size=11.5, color=C_MUTED), bgcolor=C_PAPER)
         fig.update_yaxes(title="Contribution to log-odds of fraud")
         st.plotly_chart(base_layout(fig, f"Why {MODEL_LABELS[explain]} scored this transaction as it did", height=430),
                         key="waterfall")
         st.markdown(
             "<span class='note'>For logistic regression this decomposition is exact, not an approximation: "
             "logit = bias + Σ wⱼ·zⱼ, where zⱼ is the feature standardised with training-set mean and standard "
-            "deviation. Pink pushes towards fraud, blue towards legitimate. V1–V28 are anonymised PCA components "
+            "deviation. Red pushes towards fraud, green towards legitimate. The transaction is flagged when the dark "
+            "final bar ends above the dashed threshold line. V1–V28 are anonymised PCA components "
             "released by the data owner, so they can be ranked but not named in business terms.</span>",
             unsafe_allow_html=True,
         )
