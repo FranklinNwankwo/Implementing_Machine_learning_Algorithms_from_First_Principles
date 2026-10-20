@@ -63,26 +63,32 @@ pio.templates.default = "security_print"
 st.markdown(
     f"""
     <style>
-      .block-container {{padding-top: 1.2rem; max-width: 1360px;}}
+      .block-container {{padding-top: 4.5rem; max-width: 1360px;}}
       /* tabular figures so metrics, tables and captions line up */
       [data-testid="stMetricValue"], [data-testid="stMetricDelta"], .tnum {{font-variant-numeric: tabular-nums;}}
       [data-testid="stMetricValue"] {{font-size: 1.5rem; letter-spacing: -0.01em;}}
       [data-testid="stMetricLabel"] p {{color: {C_MUTED}; font-size: 0.86rem;}}
+      /* let metric labels and values wrap instead of truncating with "…" on narrower windows */
+      [data-testid="stMetricLabel"], [data-testid="stMetricLabel"] *,
+      [data-testid="stMetricValue"], [data-testid="stMetricValue"] * {{
+        white-space: normal !important; overflow: visible !important; text-overflow: clip !important;}}
+      /* no hover link icons next to headings */
+      [data-testid="stHeaderActionElements"] {{display: none !important;}}
       .note {{color: {C_MUTED}; font-size: 0.86rem; line-height: 1.5;}}
 
       /* header: title and lede on the left, engraved rosette on the right, banknote band below */
       .hero {{display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2rem; align-items: center;}}
-      .hero h1 {{font-family: "IBM Plex Serif", Georgia, serif; font-weight: 600; font-size: 2.6rem;
+      .hero .title {{font-family: "IBM Plex Serif", Georgia, serif; font-weight: 600; font-size: clamp(1.9rem, 2.9vw, 2.6rem);
                 line-height: 1.08; letter-spacing: -0.015em; margin: 0 0 0.6rem; padding: 0; color: {C_INK};
                 text-wrap: balance;}}
       .hero p {{max-width: 64ch; font-size: 1.02rem; line-height: 1.6; margin: 0; color: #2E4744;}}
       .hero .rosette {{line-height: 0; margin-right: 0.5rem;}}
       .band {{line-height: 0; margin: 1.1rem 0 1.4rem;}}
       @media (max-width: 760px) {{
-        .block-container {{padding-top: 3.6rem;}}
+        .block-container {{padding-top: 5rem;}}
         .hero {{grid-template-columns: 1fr;}}
         .hero .rosette {{display: none;}}
-        .hero h1 {{font-size: 2rem;}}
+        .hero .title {{font-size: 1.9rem;}}
       }}
 
       /* tabs: ink underline on the active tab, no colour wash */
@@ -229,13 +235,13 @@ st.markdown(
     f"""
     <div class="hero">
       <div>
-        <h1>Fraud Detection Decision Lab</h1>
+        <div class="title" role="heading" aria-level="1">Fraud Detection Decision Lab</div>
         <p>Two logistic regression models, written from scratch in NumPy, score
         {meta['n_rows_after_dedup']:,} European card transactions, of which {_fraud_pct:.2f}% are fraud.
         A model only produces a score; where to draw the line is a business decision.
         Move the threshold to see what each choice catches, misses and costs.</p>
       </div>
-      <div class="rosette">{rosette_svg(C_ENGRAVE, 200)}</div>
+      <div class="rosette">{rosette_svg(C_ENGRAVE, 160)}</div>
     </div>
     <div class="band">{band_svg(C_ENGRAVE)}</div>
     """,
@@ -248,15 +254,15 @@ for col, k in zip(kcols[:2], ["A", "B"]):
     c = M.counts_at(data.y_test, s, models[k].tau)
     sm = M.summary(c)
     col.metric(
-        f"Model {k}: frauds caught on test at τ*",
-        f"{c.tp}/{c.tp + c.fn} frauds ({fmt_pct(sm['recall'])})",
-        help=f"Test set, τ* = {models[k].tau:.5f} chosen on validation by F2.",
+        f"Model {k}, frauds caught",
+        f"{c.tp} of {c.tp + c.fn}",
+        help=f"On the held-out test set, at τ* = {models[k].tau:.5f} (chosen on validation by F2).",
     )
-    col.caption(f"{c.fp} false alarms, precision {fmt_pct(sm['precision'])}, F2 {sm['fbeta']:.3f}")
-kcols[2].metric("Exact AUC-PR (test)", f"A {exact_curves('A', 'test')['ap']:.3f} / B {exact_curves('B', 'test')['ap']:.3f}",
-                help="Average precision over every distinct threshold. Random guessing scores the fraud rate (≈0.0016).")
-kcols[3].metric("ROC-AUC (test)", f"A {exact_curves('A', 'test')['auc']:.3f} / B {exact_curves('B', 'test')['auc']:.3f}",
-                help="Looks excellent for both — but ROC is flattered by 42,000+ easy negatives. AUC-PR is the honest metric here.")
+    col.caption(f"Recall {fmt_pct(sm['recall'])}, {c.fp} false alarms, precision {fmt_pct(sm['precision'])}")
+kcols[2].metric("AUC-PR, A / B", f"{exact_curves('A', 'test')['ap']:.3f} / {exact_curves('B', 'test')['ap']:.3f}",
+                help="Exact average precision on the held-out test set, over every distinct threshold. Random guessing scores the fraud rate (≈0.0016).")
+kcols[3].metric("ROC-AUC, A / B", f"{exact_curves('A', 'test')['auc']:.3f} / {exact_curves('B', 'test')['auc']:.3f}",
+                help="On the held-out test set. Looks excellent for both, but ROC is flattered by 42,000+ easy negatives. AUC-PR is the honest metric here.")
 
 tab_thr, tab_cmp, tab_txn, tab_hood = st.tabs(
     ["Threshold & cost", "Model A vs Model B", "Transaction explorer", "How it was built"]
