@@ -62,15 +62,16 @@ pytest -q
 
 ## Deploy on Streamlit Community Cloud
 
-1. Push this repository to GitHub (already done if you're reading this there).
-2. At [share.streamlit.io](https://share.streamlit.io), choose **Create app → Deploy a public app from GitHub**.
-3. Pick this repository and the `main` branch, and set **Main file path** to
-   `1. Supervised_Learning/02. logistic_regression_credit_card_fraud/app/app.py`.
-4. Deploy. Community Cloud installs `requirements.txt` from the app's own folder.
+1. At [share.streamlit.io](https://share.streamlit.io), choose **Create app → Deploy a public app from GitHub**.
+2. Pick this repository and the `main` branch, and set **Main file path** to `streamlit_app.py`
+   (the file at the repository root, not `app.py` in this folder).
+3. Deploy.
 
-Community Cloud reads `.streamlit/config.toml` only from the repository root, so the hosted app
-uses Streamlit's default theme unless you copy `app/.streamlit/config.toml` there. Nothing else
-depends on it.
+Why the root file: the path to this folder contains spaces, and Community Cloud passes the path of
+a `requirements.txt` found next to the main file to its installer unquoted, so deploying `app.py`
+directly fails with `Failed to parse: Supervised_Learning/02.`. The root `streamlit_app.py` simply
+runs this app; Cloud then installs the root `requirements.txt` (same four packages) and reads the
+root `.streamlit/config.toml` (same theme).
 
 ## Exactness
 
