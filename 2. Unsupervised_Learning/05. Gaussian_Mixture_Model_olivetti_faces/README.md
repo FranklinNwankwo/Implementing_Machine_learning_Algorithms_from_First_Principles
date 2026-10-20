@@ -25,7 +25,7 @@ This project walks through the full unsupervised learning pipeline:
 - **Hyperparameter and Component Selection** — a K sweep (5 to 50) evaluated on log-likelihood, held-out log-likelihood, BIC, AIC, silhouette, Davies-Bouldin, and Calinski-Harabasz, with an explicit discussion of why these criteria disagree
 - **Covariance Structure Comparison** — `full` vs. `diag` vs. `spherical` vs. `tied` at fixed K=20, exposing a sharp `full`-covariance overfitting failure on held-out data
 - **Initialization Sensitivity** — five single-restart (`n_init=1`) fits compared by log-likelihood spread and pairwise Adjusted Rand Index, motivating the multi-restart default used everywhere else
-- **PCA Dimensionality Sensitivity** — refitting at 10 to 150 retained components to trade off fit time, held-out likelihood, and clustering quality
+- **PCA Dimensionality Sensitivity** — refitting at 10 to 150 retained components to trade off fit time, explained variance, and clustering quality (held-out likelihood is reported but is not comparable across dimensionalities)
 - **Covariance Regularization Sensitivity** — a `reg_covar` sweep from 1e-8 to 1e-2, identifying the stable range before regularization starts distorting the fit
 - **Face Cluster Visualization** — component mean faces (reconstructed via inverse PCA) and each component's top-6 highest-responsibility members
 - **Uncertainty and Responsibility Analysis** — the distribution of max-responsibility "confidence" and responsibility entropy across all 400 images, and a side-by-side view of the most ambiguous vs. most confident faces
@@ -201,6 +201,8 @@ BIC is minimized at K=5; AIC keeps improving toward K=50; silhouette and held-ou
 | 10 | 65.2% | 0.32 | −1,554.52 | 0.072 |
 | 60 | 89.5% | 0.51 | −4,315.42 | −0.092 |
 | 150 | 96.9% | 1.08 | −3,297.69 | −0.191 |
+
+The test log-likelihood column is not comparable across rows: each row models the faces in a space of different dimensionality, so the log-densities are on different scales (the non-monotonic −1,555 → −4,315 → −3,298 pattern reflects that, not generalization). Likelihood only ranks models of the same data, as in the K and covariance-type comparisons. 60 components is a stated working point (89.5% of variance at modest fit time), not a likelihood-selected optimum.
 
 **Covariance regularization sensitivity** (K=20, diagonal):
 
