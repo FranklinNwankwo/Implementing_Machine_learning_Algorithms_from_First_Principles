@@ -1,9 +1,32 @@
+# "Security print" theme: security-paper ground, intaglio-ink text, engraving-green controls.
+# Keep in sync with the copy at the repository root (used by Streamlit Community Cloud).
 [theme]
 base = "light"
-primaryColor = "#4361EE"
-backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#F4F6FB"
-textColor = "#16202B"
+primaryColor = "#2D6A5F"
+backgroundColor = "#F2F4EF"
+secondaryBackgroundColor = "#E3E9E1"
+textColor = "#12302E"
+linkColor = "#2D6A5F"
+borderColor = "#CBD3CA"
+showWidgetBorder = true
+baseRadius = "0.3rem"
+buttonRadius = "0.3rem"
+font = "IBM Plex Sans:https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+headingFont = "IBM Plex Serif:https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@500;600&display=swap"
+codeFont = "IBM Plex Mono:https://fonts.googleapis.com/css2?family=IBM+Plex+Mono&display=swap"
+headingFontWeights = [600, 600, 500, 500, 500, 500]
+metricValueFontWeight = 500
+redColor = "#B3263E"
+greenColor = "#2D6A5F"
+blueColor = "#2B4C8C"
+yellowColor = "#B9822A"
+chartCategoricalColors = ["#2B4C8C", "#B9822A", "#2D6A5F", "#B3263E", "#7A8B87"]
+dataframeHeaderBackgroundColor = "#E3E9E1"
+
+[theme.sidebar]
+backgroundColor = "#E3E9E1"
+secondaryBackgroundColor = "#F2F4EF"
+borderColor = "#CBD3CA"
 
 [server]
 headless = true
