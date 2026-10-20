@@ -107,6 +107,10 @@ See `requirements.txt`. Core libraries used:
 | Gradient Descent | 0.6707  | 0.4665  | $83,609  |
 | Scikit-Learn   | 0.6743  | 0.4985  | $81,065  |
 
+R² above is in dollars, after reversing the log transform of the target. The model is trained on log price, where it scores **0.709 (train) and 0.660 (test)**. The much larger drop in dollars comes from a few extreme predictions: exponentiating a linear prediction lets unusual feature values produce prices up to ~$2.36M, while the target is capped at $500,001. The 10 worst of 4,128 test rows account for 27% of the squared error, and clipping predictions at the cap raises test R² (dollars) to 0.637.
+
+For comparison, a Random Forest on the same features reaches test R² 0.835 on log price and 0.809 in dollars, so a non-linear model clearly does better, but by less than comparing its log-scale score with the linear model's dollar score would suggest.
+
 ---
 
 ## What I learned:
