@@ -12,8 +12,8 @@ Unlike a lazy learner like KNN, LDA estimates explicit parameters at fit time, p
 
 1. **Mathematical Derivation** — class means, within-class scatter $\mathbf{S}_W$, between-class scatter $\mathbf{S}_B$, and Fisher's criterion, worked out in full before any code is written
 2. **From-Scratch Implementation** — a `CustomLDA` class (NumPy only) estimating class priors, means, and pooled covariance; Cholesky-based inversion with a `pinv` fallback; precomputed discriminant coefficients $w_k = \Sigma^{-1}\mu_k$; a numerically stable log-sum-exp softmax for `predict_proba()`
-3. **Ridge Regularisation** — a tunable $\alpha$ added to $\mathbf{S}_W$ before inversion, required because high-dimensional TF-IDF features make the scatter matrix rank-deficient
-4. **Text Feature Engineering** — a cleaning pipeline (HTML/punctuation stripping, stopword removal) feeding both TF-IDF (unigrams + bigrams, sublinear TF) and Bag-of-Words vectorisers, fit on the training split only
+3. **Ridge Regularisation** — a tunable $\alpha$ added to $\mathbf{S}_W$ before inversion, needed because the 2,000 × 2,000 scatter matrix estimated from sparse TF-IDF features is badly ill-conditioned (and would be singular outright if features outnumbered training reviews)
+4. **Text Feature Engineering** — a cleaning pipeline (HTML/punctuation stripping, stopword removal) feeding a TF-IDF vectoriser (unigrams + bigrams, sublinear TF), fit on the training split only. Bag-of-Words count matrices are also built, but LDA is trained and evaluated on TF-IDF only, so no TF-IDF-vs-BoW comparison is claimed
 
 This project walks through the full supervised learning pipeline:
 
@@ -187,9 +187,9 @@ None of the tested component counts matched direct regularised LDA's 0.8697 test
 
 ## What I learned:
 
-1. **A Rank-Deficient Scatter Matrix Is the First Thing High-Dimensional Text Breaks.**
+1. **An Ill-Conditioned Scatter Matrix Is the First Thing High-Dimensional Text Breaks.**
 
-With 2,000 TF-IDF features and a 96.7% sparse matrix, the within-class scatter matrix $\mathbf{S}_W$ is rank-deficient the moment feature count approaches sample count per class. Watching the regularisation sweep collapse from a near-singular, noise-amplifying inversion at $\alpha=10^{-6}$ to an over-shrunk, prior-dominated one at $\alpha=1.0$, with a clear peak at $\alpha=10^{-4}$, made the bias-variance trade-off in matrix inversion tangible in a way the textbook derivation alone doesn't.
+With 2,000 TF-IDF features and a 96.7% sparse matrix, the within-class scatter matrix $\mathbf{S}_W$ is technically full rank here (34,701 training reviews vs. 2,000 features) but badly ill-conditioned: its smallest eigenvalues are tiny, so inverting it amplifies noise. It would become rank-deficient outright if features outnumbered training reviews. Watching the regularisation sweep collapse from a near-singular, noise-amplifying inversion at $\alpha=10^{-6}$ to an over-shrunk, prior-dominated one at $\alpha=1.0$, with a clear peak at $\alpha=10^{-4}$, made the bias-variance trade-off in matrix inversion tangible in a way the textbook derivation alone doesn't.
 
 2. **Matching Sklearn Closely, Not Exactly, Is the Correct Bar for a Regularised Model.**
 
@@ -205,7 +205,7 @@ Two reviews that differ only in punctuation, capitalisation, or HTML markup are 
 
 5. **Testing a "Should Help" Idea Is Different From Assuming It Does.**
 
-PCA preprocessing is the textbook fix for a rank-deficient scatter matrix, it produces a full-rank $\mathbf{S}_W$ without any regularisation at all. But at every tested component count up to 200, PCA+LDA underperformed direct regularised LDA on test accuracy. Running the actual experiment rather than defaulting to the theoretically cleaner approach was what surfaced that gap.
+PCA preprocessing is the textbook fix for an ill-conditioned or rank-deficient scatter matrix, it produces a well-conditioned $\mathbf{S}_W$ without any regularisation at all. But at every tested component count up to 200, PCA+LDA underperformed direct regularised LDA on test accuracy. Running the actual experiment rather than defaulting to the theoretically cleaner approach was what surfaced that gap.
 
 6. **Cross-Validation Must Refit the Full Preprocessing Pipeline, Not Just the Model.**
 

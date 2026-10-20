@@ -22,7 +22,7 @@ This project walks through the full supervised learning pipeline:
 - **Preprocessing** — stratified 80/20 train/test split, `StandardScaler` fit on the training split only (SVMs are not scale-invariant — the `½‖w‖²` objective is dominated by large-range features otherwise), and signed `{-1, +1}` target encoding required by the hinge loss
 - **Baseline** — a most-frequent-class dummy classifier, to establish the accuracy floor and expose why accuracy alone is insufficient in a medical context
 - **Model Implementation** — a `SupportVectorMachineFromScratch` class (mini-batch subgradient descent, configurable `C`/learning rate/epochs, loss-history tracking, support-vector extraction, a sigmoid-based `predict_proba` for ROC/PR curves) built from scratch with NumPy
-- **Hyperparameter Experimentation** — a learning-rate sweep, a regularization (`C`) sweep evaluated on an internal validation split carved out of the training set only (test set never touched during model selection), and an epochs sweep
+- **Hyperparameter Experimentation** — learning-rate, regularization (`C`) and epochs sweeps, all evaluated on an internal validation split carved out of the training set only (test set never touched during model selection)
 - **Validation** — a scikit-learn-compatible wrapper (`SKLearnCompatibleSVM`) enabling native `cross_validate` 5-fold stratified CV, plus a head-to-head comparison against `sklearn.svm.SVC` with both linear and RBF kernels
 - **Comparative Modeling** — benchmarked against sklearn's SVC (linear and RBF), Logistic Regression, Decision Tree, Random Forest, Gradient Boosting, XGBoost, AdaBoost, Naive Bayes, and KNN, all under 5-fold stratified CV
 - **Diagnostics** — confusion matrices, ROC and precision-recall curves, a feature-weight bar chart (with an explicit caution against reading weight magnitude as feature importance under multicollinearity), and a side-by-side custom-vs-sklearn evaluation
@@ -203,11 +203,11 @@ The custom implementation ranks **2nd of 11 models on ROC-AUC**, outranking ever
 
 **Hyperparameter sweeps (learning rate, `C`, epochs):**
 
-- **Learning rate:** all three tested rates (η = 0.1, 0.01, 0.001) converged to essentially the same solution (accuracy 0.9474–0.9561, malignant recall 0.8810 across the board) at 1000 epochs, indicating the objective's convexity makes the final solution insensitive to learning rate at this scale.
+- **Learning rate (validation split):** all three tested rates (η = 0.1, 0.01, 0.001) converged to the same solution (validation accuracy 0.9451, malignant recall 0.8529 for every rate) at 1000 epochs, indicating the objective's convexity makes the final solution insensitive to learning rate at this scale.
 
 - **Regularization (`C`), on the internal validation split:** accuracy and malignant recall both rose sharply from `C=0.01` (0.6264 acc / 0.0 recall / 355 SVs) through `C=10` (0.9780 acc / 0.9412 recall / 66 SVs), then accuracy dipped slightly at `C=100` (0.9670 acc / 36 SVs) even as ROC-AUC kept climbing (0.9985) — consistent with the classic narrow-margin overfitting risk at very high `C`. `C=10` was selected as the best accuracy/recall balance.
 
-- **Epochs:** accuracy, recall, and final loss were already stable at 100 epochs (0.9561 / 0.8810 / loss 0.2651) and stayed essentially unchanged through 5000 epochs, while training time scaled linearly from 0.18s to 7.2s — confirming 1000 epochs is sufficient and additional epochs buy nothing but wall time.
+- **Epochs (validation split):** validation accuracy, recall, and final loss were already stable at 100 epochs (0.9451 / 0.8529 / loss ≈ 0.261) and stayed unchanged through 5000 epochs, while training time scaled roughly linearly with epochs — confirming 1000 epochs is sufficient and additional epochs buy nothing but wall time.
 
 **Hypothesis Evaluation:**
 

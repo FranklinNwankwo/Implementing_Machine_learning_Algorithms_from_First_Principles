@@ -39,9 +39,9 @@ Key issues encountered and resolved during the project:
 
 - **`full` covariance looked like the best model until the held-out set was checked** — at K=20 with ~16 training points per component, `full` covariance reaches the highest *training* log-likelihood but its *held-out* log-likelihood collapses to an extreme, deeply negative value (near-singular per-component covariance estimates assigning vanishing density to unseen faces); BIC's parameter-count penalty flags the same problem from the training set alone
 
-- **Log-likelihood, BIC, AIC, and silhouette disagree on the "best" K, and the notebook reports the disagreement rather than picking one and hiding the rest** — BIC is minimized at the smallest K tested (K=5), AIC keeps improving toward the largest K tested, and silhouette favors the largest K tested (K=40); K=20 is kept for the remaining experiments as a stated, deliberate compromise, not the optimum by any single metric
+- **Log-likelihood, BIC, AIC, and silhouette disagree on the "best" K, and the notebook reports the disagreement rather than picking one and hiding the rest** — BIC is minimized at the smallest K tested (K=5), AIC keeps improving toward the largest K tested, and both silhouette and held-out log-likelihood are best at K=40; K=20 is kept for the remaining experiments as a stated, deliberate compromise, not the optimum by any single metric
 
-- **Comparable objective values but low hard-assignment agreement with sklearn is not a bug** — the custom and sklearn implementations reach final log-likelihoods within about 0.9% of each other, but hard-assignment agreement after Hungarian label-alignment is only 18.8% (ARI 0.062); the initialization-sensitivity experiment already showed this is the expected signature of two independent EM runs landing in different (but similarly good) local optima at K=20, not evidence one implementation is wrong
+- **Comparable objective values but low hard-assignment agreement with sklearn is not a bug** — the custom and sklearn implementations reach final log-likelihoods within about 0.9% of each other, but hard-assignment agreement after Hungarian label-alignment is only 18.8% (ARI 0.062); the two runs use different initialization (sklearn starts from K-Means; the custom model from random data points) and different stopping rules (sklearn's `tol` is on the per-sample average gain, roughly 50× stricter here), so they land in different local optima. The custom solution is noticeably lopsided (one component holds 44.5% of the weight, several hold 1–3 images), so its slightly higher likelihood does not mean a better clustering. The stronger correctness evidence is the synthetic test, where the two implementations agree to within 0.02 nats and recover the true parameters
 
 ---
 
@@ -117,7 +117,7 @@ See `requirements.txt`. Core libraries used:
 | `n_init` | 5 |
 | PCA components (input space) | 60 (~89.5% cumulative explained variance) |
 
-K=20 with diagonal covariance is a deliberate compromise, not the optimum by any single model-selection metric: small enough to keep the `full`-covariance and PCA-dimensionality experiments computationally tractable, large enough for individual components to specialize into visually distinct, interpretable prototypes (BIC alone favors K=5, which merges most of the dataset's visual variety into just five broad prototypes).
+K=20 with diagonal covariance is a deliberate compromise, not the optimum by any model-selection metric (held-out log-likelihood would pick K=40): small enough to keep the `full`-covariance and PCA-dimensionality experiments computationally tractable, large enough for individual components to specialize into visually distinct, interpretable prototypes (BIC alone favors K=5, which merges most of the dataset's visual variety into just five broad prototypes).
 
 ---
 
@@ -127,7 +127,7 @@ K=20 with diagonal covariance is a deliberate compromise, not the optimum by any
 
 - **`full` covariance overfits sharply at this sample size**: with ~16 training points per component at K=20, `full` covariance reaches the highest training log-likelihood but a catastrophically worse held-out log-likelihood than `diag`, `spherical`, or `tied`; `diag` is the standing default throughout.
 
-- **The choice of K is a documented judgment call, not a uniquely correct answer**: BIC, AIC, and silhouette disagree on the best K across the {5, 10, 15, 20, 25, 30, 40, 50} sweep, and K=20 was selected as an explicit trade-off rather than an automatic rule.
+- **The choice of K is a documented judgment call, not a uniquely correct answer**: BIC, AIC, and silhouette disagree on the best K across the {5, 10, 15, 20, 25, 30, 40, 50} sweep, and K=20 was selected as an explicit trade-off rather than an automatic rule. Held-out log-likelihood, the most direct generalization check, peaks at K=40; it would be the criterion to use in a revision.
 
 - **High-dimensional covariance estimation is data-hungry**: full covariance is usable only at low K or with strong regularization, given only 400 images total.
 
@@ -173,7 +173,7 @@ K=20 with diagonal covariance is a deliberate compromise, not the optimum by any
 | 40 | −12,174.24 | −4,149.65 | 52,261.40 | −0.015 |
 | 50 | −10,022.48 | −4,367.46 | 54,937.53 | −0.025 |
 
-BIC is minimized at K=5; AIC keeps improving toward K=50; silhouette favors K=40. No single criterion identifies a "correct" K — K=20 is used going forward as a stated compromise.
+BIC is minimized at K=5; AIC keeps improving toward K=50; silhouette and held-out log-likelihood are both best at K=40 (test log-lik −4,149.65, falling to −4,367.46 at K=50). K=20 is used going forward as a stated compromise, not the output of any criterion.
 
 **Covariance structure comparison** (K=20, full dataset train/test):
 
@@ -230,7 +230,7 @@ The stable range is roughly 1e-8 to 1e-4; 1e-2 measurably distorts the fit.
 | BIC | 45,478.80 | 45,766.32 |
 | AIC | 36,363.23 | 36,650.75 |
 
-After Hungarian-algorithm label alignment: hard-assignment agreement = **18.8%**, Adjusted Rand Index = **0.062**. Close objective values combined with low exact-assignment agreement is the expected signature of two independent, correct EM implementations converging to different local optima, not evidence of disagreement about the underlying mathematics.
+After Hungarian-algorithm label alignment: hard-assignment agreement = **18.8%**, Adjusted Rand Index = **0.062**. Close objective values with low assignment agreement reflect different local optima, driven by different initialization (K-Means vs. random data points) and a roughly 50× looser stopping rule in the custom model. The custom solution is lopsided (largest component weight 0.445 vs. 0.016 for its matched sklearn component), so its higher likelihood is not a better clustering. The implementation's correctness rests on the synthetic test, where both agree to within 0.02 nats.
 
 **Advanced algorithm comparison** (K/max-components = 40, full dataset, PCA space):
 
@@ -258,7 +258,7 @@ The custom implementation and sklearn's reach final log-likelihoods within about
 
 3. **Disagreeing Model-Selection Criteria Is a Finding, Not a Failure to Pick One.**
 
-BIC (K=5), AIC (favors the largest K tested), and silhouette (K=40) each answer "what is a good K" differently on the same sweep, because each is measuring something different: complexity-penalized likelihood, a gentler complexity penalty, and pure clustering geometry respectively. Rather than silently picking whichever criterion produced the most flattering number, stating the disagreement and then making an explicit, justified trade-off (K=20, for interpretability and computational tractability in later experiments) was more honest and more useful than an automatic rule would have been.
+BIC (K=5), AIC (favors the largest K tested), and silhouette (K=40) each answer "what is a good K" differently on the same sweep, because each is measuring something different: complexity-penalized likelihood, a gentler complexity penalty, and pure clustering geometry respectively. Rather than silently picking whichever criterion produced the most flattering number, stating the disagreement and then making an explicit, justified trade-off (K=20, for interpretability and computational tractability in later experiments, while noting that held-out log-likelihood would choose K=40) was more honest and more useful than an automatic rule would have been.
 
 4. **Multi-Restart Fitting Is Not Optional Polish at This Scale.**
 
@@ -270,7 +270,7 @@ Five single-restart fits at K=20 varied by 4% of their mean log-likelihood magni
 
 6. **Testing Alternative Algorithms Revealed a Genuine Trade-Off, Not a Ranking.**
 
-K-Means and Agglomerative Clustering scored best against subject identity; DBSCAN was the only method that could flag points as noise; Bayesian GMM's automatic-relevance prior concluded the data supports far fewer effective components than the 40 requested; and the custom GMM uniquely provided calibrated per-observation uncertainty none of the hard-clustering methods can. There was no universal winner, only the best method for a stated objective, which is a more honest conclusion than picking the single-metric leaderboard topper.
+K-Means and Agglomerative Clustering scored best against subject identity; DBSCAN was the only method that could flag points as noise; Bayesian GMM's automatic-relevance prior concluded the data supports far fewer effective components than the 40 requested; and the custom GMM provided per-observation soft assignments none of the hard-clustering methods can, although it matched subject identity far less well (ARI 0.109 vs. 0.398 for K-Means and 0.488 for Agglomerative) and its responsibilities were never checked for calibration. There was no universal winner, only the best method for a stated objective, which is a more honest conclusion than picking the single-metric leaderboard topper.
 
 7. **Numerical Stability Techniques Are Load-Bearing, Not Optional, at 60 Dimensions.**
 
