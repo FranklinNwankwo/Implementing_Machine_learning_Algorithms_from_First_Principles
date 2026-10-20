@@ -11,7 +11,7 @@ rather than a constant.
 
 | Tab | What you can do |
 |---|---|
-| **Threshold & cost** | Drag τ and see recall, precision, F2, false-alarm rate, alerts per 10,000 transactions and total cost update live, with Wilson 95% intervals. Presets jump to the notebook's τ\*, the exact F2 optimum, or the minimum-cost τ, all chosen on **validation** so the test set is never used for selection. Includes the confusion matrix, the PR curve with the operating point marked, the score distribution by class, and cost vs alert volume. |
+| **Threshold & cost** | Drag τ and see recall, precision, F2, false-alarm rate, alerts per 10,000 transactions and total cost update live, with Wilson 95% intervals. Presets jump to the notebook's τ\* (best F2) or the minimum-cost τ, both chosen on **validation** so the test set is never used for selection. Includes the confusion matrix, the PR curve with the operating point marked, the score distribution by class, and cost vs alert volume. |
 | **Model A vs Model B** | Weighted BCE vs SMOTE side by side: metrics table, PR curves, ROC on a log false-positive axis, and whether the two models catch the *same* frauds. |
 | **Transaction explorer** | Pick a real held-out transaction (missed frauds, caught frauds, false alarms, or the most confident legitimate ones) and see both scores against the threshold, plus an exact logit breakdown: `logit = bias + Σ wⱼ·zⱼ`. |
 | **How it was built** | Pipeline summary, training curves, reliability diagram, learned weights, and how the app's numbers reconcile with the notebook. |
@@ -31,15 +31,15 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-The trained models and the validation/test splits are committed in `artifacts/` (about 9 MB),
+The trained models and the validation/test splits are committed in `artifacts/` (about 19 MB),
 so the app starts without downloading the dataset or retraining.
 
 ## Rebuild the artifacts
 
 `build_artifacts.py` repeats the notebook pipeline exactly (same seeds, split, normalisation,
 SMOTE, training and F2 threshold search). It refuses to save if the operating points differ from
-the notebook's (τ\* = 0.9867 / 0.7671; 58 frauds caught, 12 missed, 29 false alarms on test for
-both models).
+the notebook's (τ\* = 0.99971 / 0.79094; on test, Model A catches 55 of 70 frauds with 16 false
+alarms and Model B catches 57 with 28).
 
 ```bash
 python build_artifacts.py                          # downloads creditcard.csv (~150 MB)
@@ -72,17 +72,19 @@ Community Cloud reads `.streamlit/config.toml` only from the repository root, so
 uses Streamlit's default theme unless you copy `app/.streamlit/config.toml` there. Nothing else
 depends on it.
 
-## Numbers that differ from the notebook (by design)
+## Exactness
 
-- **AUC-PR.** The notebook integrates the PR curve over a 300-point threshold grid and reports
-  0.558 (A) and 0.754 (B). Model A's scores pile up close to 1.0, between grid points, so the grid
-  under-measures it. The app uses every distinct score (exact average precision): **0.724 (A)** and
-  **0.741 (B)** on test.
-- **Threshold range.** The notebook's grid stops at 0.99. Model A's exact F2 optimum on validation
-  is τ = 0.9997, which is what the *Exact F2* preset selects.
-- **Calibration.** Both models over-predict fraud (class weighting and SMOTE train on a world
-  where fraud is far more common than 0.17%), so the app treats scores as rankings, not
-  probabilities.
+- **Scores match the notebook bit for bit.** The evaluation data is stored at full float64 precision
+  and the logit is computed in the notebook's operation order, so a transaction sitting exactly at
+  τ\* stays on the same side of it. A test asserts that τ\* is exactly the F2-optimal validation score.
+- **AUC-PR is exact average precision** (0.724 for A, 0.741 for B on test), the same definition the
+  notebook uses. An earlier version of the notebook integrated over a 300-point grid, which missed
+  Model A's scores above 0.99 and reported 0.558.
+- **Some Model A scores are exactly 1.0** (the sigmoid saturates in float64), so even τ = 1.0 flags
+  them. When flagging nothing is the cheapest option, the *Min cost* preset is disabled and the app
+  says why.
+- **Calibration.** Both models over-predict fraud (class weighting and SMOTE train on a world where
+  fraud is far more common than 0.17%), so the app treats scores as rankings, not probabilities.
 
 ## Layout
 

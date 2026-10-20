@@ -191,35 +191,36 @@ def precision_recall_f1(y_true, y_pred, beta=1.0):
     return prec, rec, (1 + beta ** 2) * prec * rec / (beta ** 2 * prec + rec + 1e-15)
 
 
-def find_optimal_threshold(y_true, y_scores, beta=2.0, n_thresholds=300):
-    best_t, best_fb = 0.5, 0.0
-    for t in np.linspace(0.01, 0.99, n_thresholds):
-        _, _, fb = precision_recall_f1(y_true, (y_scores >= t).astype(int), beta=beta)
-        if fb > best_fb:
-            best_fb, best_t = fb, t
-    return best_t, best_fb
+def _threshold_sweep(y_true, y_scores):
+    """Exact cumulative counts at every distinct score (highest threshold first)."""
+    y_true = np.asarray(y_true).ravel()
+    y_scores = np.asarray(y_scores).ravel()
+    order = np.argsort(-y_scores, kind="mergesort")
+    s, y = y_scores[order], y_true[order]
+    last = np.r_[np.where(np.diff(s) != 0)[0], len(s) - 1]
+    tp = np.cumsum(y == 1)[last]
+    fp = np.cumsum(y == 0)[last]
+    return s[last], tp, fp, int((y == 1).sum()), int((y == 0).sum())
 
 
-def notebook_grid_auc_pr(y_true, y_scores, n_thresholds=300):
-    """The notebook's 300-point linear-grid AUC-PR, kept for reference only."""
-    recs, precs = [], []
-    for t in np.linspace(0, 1, n_thresholds):
-        y_pred = (y_scores >= t).astype(int)
-        tp = np.sum((y_true == 1) & (y_pred == 1))
-        fp = np.sum((y_true == 0) & (y_pred == 1))
-        precs.append(1.0 if tp + fp == 0 else tp / (tp + fp))
-        recs.append(precision_recall_f1(y_true, y_pred)[1])
-    recs, precs = np.array(recs), np.array(precs)
-    order = np.argsort(recs)
-    return float(np.trapezoid(precs[order], recs[order]))
+def find_optimal_threshold(y_true, y_scores, beta=2.0):
+    """F-beta-optimal threshold over every distinct score (as in the notebook)."""
+    thr, tp, fp, P, _ = _threshold_sweep(y_true, y_scores)
+    precision = tp / (tp + fp)
+    recall = tp / P
+    with np.errstate(invalid="ignore", divide="ignore"):
+        fb = np.where(precision + recall > 0,
+                      (1 + beta**2) * precision * recall / (beta**2 * precision + recall), 0.0)
+    i = int(np.argmax(fb))
+    return float(thr[i]), float(fb[i])
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Expected notebook results (test set, operating point chosen on validation)
 # ─────────────────────────────────────────────────────────────────────────────
 EXPECTED = {
-    "A": dict(tau=0.987, tp=58, fn=12, fp=29),
-    "B": dict(tau=0.767, tp=58, fn=12, fp=29),
+    "A": dict(tau=0.99971, tp=55, fn=15, fp=16),
+    "B": dict(tau=0.79094, tp=57, fn=13, fp=28),
 }
 
 
@@ -251,9 +252,9 @@ def main(source: str) -> None:
         fn = int(np.sum((y_test == 1) & (pred == 0)))
         fp = int(np.sum((y_test == 0) & (pred == 1)))
         exp = EXPECTED[name]
-        assert round(tau, 3) == exp["tau"] and (tp, fn, fp) == (exp["tp"], exp["fn"], exp["fp"]), (
+        assert abs(tau - exp["tau"]) < 5e-6 and (tp, fn, fp) == (exp["tp"], exp["fn"], exp["fp"]), (
             f"Model {name} does not reproduce the notebook: tau={tau:.4f} TP={tp} FN={fn} FP={fp}")
-        out[name] = dict(tau=tau, f2_val=f2_val, grid_auc_pr=notebook_grid_auc_pr(y_test, p_test))
+        out[name] = dict(tau=tau, f2_val=f2_val)
         print(f"Model {name}: tau={tau:.4f}  TP={tp} FN={fn} FP={fp}  (matches notebook)")
 
     ART_DIR.mkdir(exist_ok=True)
@@ -270,8 +271,10 @@ def main(source: str) -> None:
     )
     np.savez_compressed(
         ART_DIR / "eval_data.npz",
-        X_val=X_val.astype(np.float32), y_val=y_val.astype(np.int8),
-        X_test=X_test.astype(np.float32), y_test=y_test.astype(np.int8),
+        # float64, not float32: scores must match the notebook bit for bit, or a
+        # transaction sitting exactly at τ* can land on the other side of it.
+        X_val=X_val, y_val=y_val.astype(np.int8),
+        X_test=X_test, y_test=y_test.astype(np.int8),
     )
     meta = {
         "seed": SEED,
@@ -286,7 +289,6 @@ def main(source: str) -> None:
         "train_fraud_amount_median": float(np.median(np.expm1(X_train[y_train == 1, -1]))),
         "epochs_A": len(model_A.loss_history), "epochs_B": len(model_B.loss_history),
         "f2_val_A": float(out["A"]["f2_val"]), "f2_val_B": float(out["B"]["f2_val"]),
-        "notebook_grid_auc_pr_A": out["A"]["grid_auc_pr"], "notebook_grid_auc_pr_B": out["B"]["grid_auc_pr"],
     }
     (ART_DIR / "meta.json").write_text(json.dumps(meta, indent=2))
     print(f"Artifacts written to {ART_DIR}")

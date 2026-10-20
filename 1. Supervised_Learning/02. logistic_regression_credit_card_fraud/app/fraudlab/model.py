@@ -54,7 +54,10 @@ class FraudModel:
         return (np.asarray(X, dtype=np.float64) - self.mu) / self.sigma
 
     def logit(self, X: np.ndarray) -> np.ndarray:
-        return self.bias + self.standardise(X) @ self.coef
+        # Same operation order as the notebook ([1, z] @ w), so scores match it
+        # bit for bit and a transaction sitting exactly at τ* stays on its side.
+        Z = self.standardise(X)
+        return np.hstack([np.ones((Z.shape[0], 1)), Z]) @ self.weights
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
         return sigmoid(self.logit(X))

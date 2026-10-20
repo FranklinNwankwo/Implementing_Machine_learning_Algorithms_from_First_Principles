@@ -99,9 +99,9 @@ def validation_thresholds(model_key: str, fixed_fee: float, include_amount: bool
     s_val = scores_for(model_key, "validation")
     amounts = amounts_from_features(data.X_val, model.feature_names)
     loss = M.fraud_loss_per_sample(amounts, fixed_fee, include_amount)
-    f2_tau, f2_val = M.best_fbeta_threshold(data.y_val, s_val, beta=2.0)
+    _, f2_val = M.best_fbeta_threshold(data.y_val, s_val, beta=2.0)
     cost_tau = M.min_cost_threshold(data.y_val, s_val, loss, review_cost)
-    return {"notebook": model.tau, "f2_exact": f2_tau, "f2_exact_val": f2_val, "min_cost": cost_tau}
+    return {"notebook": model.tau, "f2_val": f2_val, "min_cost": cost_tau}
 
 
 models, data, meta = get_models(), get_data(), get_meta()
@@ -125,11 +125,11 @@ def clamp_tau(t: float) -> float:
 # Session state: one threshold per model, initialised at the notebook's τ*
 # ─────────────────────────────────────────────────────────────────────────────
 for k, m in models.items():
-    st.session_state.setdefault(f"tau_{k}", round(m.tau, 4))
+    st.session_state.setdefault(f"tau_{k}", float(m.tau))  # exact, not rounded: rounding would change the counts
 
 
 def set_tau(model_key: str, value: float) -> None:
-    st.session_state[f"tau_{model_key}"] = round(clamp_tau(value), 4)
+    st.session_state[f"tau_{model_key}"] = float(clamp_tau(value))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -192,7 +192,7 @@ for col, k in zip(kcols[:2], ["A", "B"]):
     col.metric(
         f"Model {k} · test recall at τ*",
         f"{c.tp}/{c.tp + c.fn} frauds ({fmt_pct(sm['recall'])})",
-        help=f"Test set, τ* = {models[k].tau:.4f} chosen on validation by F2.",
+        help=f"Test set, τ* = {models[k].tau:.5f} chosen on validation by F2.",
     )
     col.caption(f"{c.fp} false alarms · precision {fmt_pct(sm['precision'])} · F2 {sm['fbeta']:.3f}")
 kcols[2].metric("Exact AUC-PR (test)", f"A {exact_curves('A', 'test')['ap']:.3f} · B {exact_curves('B', 'test')['ap']:.3f}",
@@ -252,7 +252,7 @@ def score_hist_fig(scores: np.ndarray, y: np.ndarray, tau: float) -> go.Figure:
     fig = go.Figure()
     fig.add_trace(go.Histogram(x=scores[y == 0], xbins=bins, name="Legitimate", marker_color=C_LEGIT, opacity=0.7))
     fig.add_trace(go.Histogram(x=scores[y == 1], xbins=bins, name="Fraud", marker_color=C_FRAUD, opacity=0.85))
-    fig.add_vline(x=tau, line=dict(color=C_GOLD, width=3), annotation_text=f"τ = {tau:.4f}")
+    fig.add_vline(x=tau, line=dict(color=C_GOLD, width=3), annotation_text=f"τ = {tau:.5f}")
     fig.update_layout(barmode="overlay")
     fig.update_yaxes(type="log", title="Transactions (log scale)")
     fig.update_xaxes(title="Model score P(fraud | x)")
@@ -267,20 +267,20 @@ with tab_thr:
     with top[0]:
         mk = st.radio("Model", ["A", "B"], format_func=lambda k: MODEL_LABELS[k], horizontal=True, key="thr_model")
         vt = validation_thresholds(mk, fixed_fee, include_amount, review_cost)
-        st.slider("Decision threshold τ — flag if score ≥ τ", 0.0, 1.0, step=0.0001, format="%.4f",
+        st.slider("Decision threshold τ — flag if score ≥ τ", 0.0, 1.0, step=0.00001, format="%.5f",
                   key=f"tau_{mk}")
         st.caption("Presets (all chosen on the **validation** set):")
-        b1, b2, b3 = st.columns(3)
-        b1.button("Notebook", on_click=set_tau, args=(mk, vt["notebook"]), width="stretch",
-                  help=f"F2-optimal on a 300-point grid between 0.01 and 0.99, as in the notebook: τ = {vt['notebook']:.4f}")
-        b2.button("Exact F2", on_click=set_tau, args=(mk, vt["f2_exact"]), width="stretch",
-                  help=f"F2-optimal over every distinct validation score (no grid): τ = {vt['f2_exact']:.4f}, "
-                       f"validation F2 = {vt['f2_exact_val']:.3f}")
-        b3.button("Min cost", on_click=set_tau, args=(mk, vt["min_cost"]), width="stretch",
+        b1, b2 = st.columns(2)
+        b1.button("Best F2", on_click=set_tau, args=(mk, vt["notebook"]), width="stretch",
+                  help=f"F2-optimal over every distinct validation score, as in the notebook: τ = {vt['notebook']:.5f}, "
+                       f"validation F2 = {vt['f2_val']:.3f}")
+        b2.button("Min cost", on_click=set_tau, args=(mk, vt["min_cost"]), width="stretch",
+                  disabled=bool(np.isinf(vt["min_cost"])),
                   help="Threshold that minimises total cost on validation under the sidebar's cost assumptions.")
         if np.isinf(vt["min_cost"]):
-            st.info("Under these cost assumptions, flagging nothing is cheapest on validation; the Min cost "
-                    "preset sets τ = 1.0. Raise the fixed cost per missed fraud or lower the review cost.")
+            st.info("Under these cost assumptions, flagging nothing is cheapest on validation, which no slider "
+                    "position can express (some scores are exactly 1.0, so even τ = 1.0 flags them). Raise the "
+                    "fixed cost per missed fraud or lower the review cost.")
 
     tau = float(st.session_state[f"tau_{mk}"])
     s_eval = scores_for(mk, split)
@@ -320,7 +320,7 @@ with tab_thr:
         st.plotly_chart(confusion_fig(c), key="cm")
     with g2:
         cv = exact_curves(mk, split)
-        pts = {f"Current τ = {tau:.4f}": (sm["recall"], 1.0 if np.isnan(sm["precision"]) else sm["precision"], C_GOLD)}
+        pts = {f"Current τ = {tau:.5f}": (sm["recall"], 1.0 if np.isnan(sm["precision"]) else sm["precision"], C_GOLD)}
         st.plotly_chart(pr_fig({mk: cv}, pts, n_fraud_eval / n_eval), key="pr")
 
     g3, g4 = st.columns(2)
@@ -370,9 +370,9 @@ with tab_cmp:
         ck_cost = M.cost_at(y_eval, s, loss_eval, t, review_cost)
         preds[k] = s >= t
         curves[k] = cv
-        points[f"{k} at τ = {t:.4f}"] = (smk["recall"], 1.0 if np.isnan(smk["precision"]) else smk["precision"], C_MODEL[k])
+        points[f"{k} at τ = {t:.5f}"] = (smk["recall"], 1.0 if np.isnan(smk["precision"]) else smk["precision"], C_MODEL[k])
         rows.append({
-            "Model": MODEL_LABELS[k], "τ": f"{t:.4f}", "Frauds caught": f"{ck.tp}/{ck.tp + ck.fn}",
+            "Model": MODEL_LABELS[k], "τ": f"{t:.5f}", "Frauds caught": f"{ck.tp}/{ck.tp + ck.fn}",
             "False alarms": ck.fp, "Precision": fmt_pct(smk["precision"]), "Recall": fmt_pct(smk["recall"]),
             "F2": f"{smk['fbeta']:.3f}", "MCC": f"{smk['mcc']:.3f}",
             "AUC-PR (exact)": f"{cv['ap']:.3f}", "ROC-AUC": f"{cv['auc']:.4f}",
@@ -409,10 +409,10 @@ with tab_cmp:
     v[3].metric("Missed by both", neither)
     v[4].metric("False alarms shared", fa_both)
     st.markdown(
-        "<span class='note'>At the notebook thresholds the two models have identical confusion matrices on the test set "
-        "(58 caught, 12 missed, 29 false alarms). That is a coincidence of a 70-fraud test set, not proof they are "
-        "equivalent: the overlap above shows whether they agree on <i>which</i> transactions, and their PR curves differ "
-        "across the rest of the threshold range.</span>",
+        f"<span class='note'>Counts use each model's current threshold on the {split} set. With only "
+        f"{int(y_eval.sum())} frauds, a difference of one or two catches is within noise: the two models rank "
+        "transactions about equally well (see AUC-PR above), and the overlap shows how far they agree on "
+        "<i>which</i> frauds they catch.</span>",
         unsafe_allow_html=True,
     )
 
@@ -434,7 +434,7 @@ with tab_txn:
         "Random legitimate sample": np.random.default_rng(0).choice(np.where(~fraud)[0], 200, replace=False),
     }
     c1, c2, c3 = st.columns([1.2, 2, 1])
-    group = c1.selectbox("Show", list(groups), help=f"Uses each model's current threshold (A: {tA:.4f}, B: {tB:.4f}).")
+    group = c1.selectbox("Show", list(groups), help=f"Uses each model's current threshold (A: {tA:.5f}, B: {tB:.5f}).")
     idx = groups[group]
     idx = idx[np.argsort(-sA[idx])] if len(idx) else idx
     if len(idx) == 0:
@@ -458,7 +458,7 @@ with tab_txn:
         for col, k, s_k, t_k, f_k in [(info[1], "A", sA, tA, fA), (info[2], "B", sB, tB, fB)]:
             pct_rank = 100 * np.mean(s_k <= s_k[pick])
             col.markdown(
-                f"**{MODEL_LABELS[k]}**<br>score {s_k[pick]:.6f} · τ {t_k:.4f}<br>"
+                f"**{MODEL_LABELS[k]}**<br>score {s_k[pick]:.6f} · τ {t_k:.5f}<br>"
                 f"<span class='pill {'pill-flag' if f_k[pick] else 'pill-legit'}'>"
                 f"{'Flagged' if f_k[pick] else 'Not flagged'}</span> "
                 f"<span class='note'>higher than {pct_rank:.2f}% of transactions</span>",
@@ -489,7 +489,7 @@ with tab_txn:
         if 0 < t_cur < 1:
             thr_logit = np.log(t_cur / (1 - t_cur))
             fig.add_hline(y=thr_logit, line=dict(color=C_MUTED, dash="dash"),
-                          annotation_text=f"current threshold τ = {t_cur:.4f} in log-odds ({thr_logit:+.2f}); "
+                          annotation_text=f"current threshold τ = {t_cur:.5f} in log-odds ({thr_logit:+.2f}); "
                                           f"the transaction is flagged if the gold bar ends above this line")
         fig.update_yaxes(title="Contribution to log-odds of fraud")
         st.plotly_chart(base_layout(fig, f"Why {MODEL_LABELS[explain]} scored this transaction as it did", height=430),
@@ -570,16 +570,16 @@ with tab_hood:
     st.plotly_chart(base_layout(wf, "Largest learned weights (top 15 by |Model A weight|)", height=480), key="weights")
 
     st.subheader("Numbers you may compare with the notebook")
+    nb_counts = {k: M.counts_at(data.y_test, scores_for(k, "test"), models[k].tau) for k in ("A", "B")}
     st.markdown(
         f"""
-- **Operating points match exactly.** At τ* = {models['A'].tau:.4f} (A) and {models['B'].tau:.4f} (B), both models catch
-  58 of 70 test frauds with 29 false alarms — the notebook's figures.
-- **AUC-PR differs, by design.** The notebook integrates the PR curve over a 300-point threshold grid, which reports
-  {meta['notebook_grid_auc_pr_A']:.3f} (A) and {meta['notebook_grid_auc_pr_B']:.3f} (B). Model A's scores pile up near 1.0, between grid points, so the grid
-  under-measures it. This app uses every distinct score (exact average precision): **{exact_curves('A', 'test')['ap']:.3f} (A)**
-  and **{exact_curves('B', 'test')['ap']:.3f} (B)** on test.
-- **The notebook's grid also caps τ at 0.99.** Model A's exact F2 optimum on validation is
-  τ = {validation_thresholds('A', fixed_fee, include_amount, review_cost)['f2_exact']:.4f} (the "Exact F2" preset).
+- **Operating points match exactly.** At τ* = {models['A'].tau:.5f} (A) the model catches {nb_counts['A'].tp} of
+  {nb_counts['A'].tp + nb_counts['A'].fn} test frauds with {nb_counts['A'].fp} false alarms; at τ* = {models['B'].tau:.5f} (B) it catches
+  {nb_counts['B'].tp} with {nb_counts['B'].fp} false alarms — the notebook's figures.
+- **AUC-PR is exact average precision**, as in the notebook: **{exact_curves('A', 'test')['ap']:.3f} (A)** and
+  **{exact_curves('B', 'test')['ap']:.3f} (B)** on test. An earlier version of the notebook integrated over a fixed
+  300-point grid and searched τ only up to 0.99; Model A's scores sit mostly above 0.99, so that version reported
+  0.558 for A and could not reach A's real F2 optimum (τ ≈ 0.9997).
 
 **Limitations to keep in mind:** the test set holds only 70 frauds, so single-threshold metrics move in steps of
 ~1.4 points of recall; features V1–V28 are anonymised PCA components, so the model cannot be explained in business

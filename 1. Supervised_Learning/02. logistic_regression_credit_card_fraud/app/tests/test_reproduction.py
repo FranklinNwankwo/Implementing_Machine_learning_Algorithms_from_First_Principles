@@ -6,7 +6,7 @@ import pytest
 from fraudlab import metrics as M
 from fraudlab.model import load_eval_data, load_models, load_meta
 
-NOTEBOOK = {"A": dict(tau=0.987, tp=58, fn=12, fp=29), "B": dict(tau=0.767, tp=58, fn=12, fp=29)}
+NOTEBOOK = {"A": dict(tau=0.99971, tp=55, fn=15, fp=16), "B": dict(tau=0.79094, tp=57, fn=13, fp=28)}
 
 
 @pytest.fixture(scope="module")
@@ -20,7 +20,7 @@ def test_operating_point_matches_notebook(setup, key):
     m = models[key]
     c = M.counts_at(data.y_test, m.predict_proba(data.X_test), m.tau)
     exp = NOTEBOOK[key]
-    assert round(m.tau, 3) == exp["tau"]
+    assert m.tau == pytest.approx(exp["tau"], abs=5e-6)
     assert (c.tp, c.fn, c.fp) == (exp["tp"], exp["fn"], exp["fp"])
 
 
@@ -41,3 +41,12 @@ def test_contributions_reconstruct_probability(setup, key):
 
 def test_gradient_check_passed(setup):
     assert setup[2]["gradient_check_rel_error"] < 1e-5
+
+
+@pytest.mark.parametrize("key", ["A", "B"])
+def test_tau_is_exact_f2_optimum_on_validation(setup, key):
+    """τ* must be exactly the F2-optimal validation score, bit for bit, so the app's
+    validation counts and presets agree with the notebook."""
+    models, data, _ = setup
+    tau, _ = M.best_fbeta_threshold(data.y_val, models[key].predict_proba(data.X_val), beta=2.0)
+    assert tau == models[key].tau

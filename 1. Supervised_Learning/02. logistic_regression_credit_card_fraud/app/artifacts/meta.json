@@ -17,8 +17,6 @@
   "train_fraud_amount_median": 7.6000000000000005,
   "epochs_A": 2000,
   "epochs_B": 2000,
-  "f2_val_A": 0.7571801566579633,
-  "f2_val_B": 0.8086253369272236,
-  "notebook_grid_auc_pr_A": 0.5580266894076145,
-  "notebook_grid_auc_pr_B": 0.753979422297082
+  "f2_val_A": 0.775623268698061,
+  "f2_val_B": 0.8086253369272238
 }

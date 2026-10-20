@@ -21,14 +21,14 @@ def ok(app):
 
 def test_initial_render(at):
     assert len(at.tabs) == 4
-    assert at.session_state["tau_A"] == pytest.approx(0.9867, abs=1e-4)
-    assert at.session_state["tau_B"] == pytest.approx(0.7671, abs=1e-4)
+    assert at.session_state["tau_A"] == pytest.approx(0.99971, abs=5e-6)
+    assert at.session_state["tau_B"] == pytest.approx(0.79094, abs=5e-6)
 
 
 def test_presets_and_extremes(at):
     radio = next(r for r in at.radio if r.key == "thr_model")
     radio.set_value(radio.options[1]).run(); ok(at)
-    for label in ["Notebook", "Exact F2", "Min cost"]:
+    for label in ["Best F2", "Min cost"]:
         next(b for b in at.button if b.label == label).click().run(); ok(at)
     for tau in (0.0, 1.0):
         at.slider(key="tau_B").set_value(tau).run(); ok(at)
@@ -40,7 +40,10 @@ def test_validation_split_and_costs(at):
     at.toggle[0].set_value(False).run(); ok(at)
     at.number_input[0].set_value(500.0).run(); ok(at)
     at.number_input[1].set_value(0.0).run(); ok(at)
-    next(b for b in at.button if b.label == "Min cost").click().run(); ok(at)  # may be "flag nothing"
+    # €500 per review, €0 per missed fraud: flagging nothing is cheapest, which no
+    # slider position can express, so the preset must be disabled and explained.
+    assert next(b for b in at.button if b.label == "Min cost").disabled
+    assert any("flagging nothing is cheapest" in i.value for i in at.info)
 
 
 def test_transaction_explorer_groups(at):
