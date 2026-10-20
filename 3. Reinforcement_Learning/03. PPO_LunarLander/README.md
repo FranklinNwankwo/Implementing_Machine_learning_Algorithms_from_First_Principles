@@ -39,6 +39,10 @@ Key issues encountered and resolved during the project:
 
 - **Narrative markdown cells silently went stale after the fix changed real training dynamics.** Because the leak was corrected (not just cosmetically renamed), the same three seeds produced materially different multi-seed results post-fix (e.g. seed 0's mean eval return moved from 6.4 to −50.6). A "Failure Analysis" cell that hardcoded the pre-fix numbers had to be caught and updated by re-running the notebook end-to-end and diffing the fresh output against the prose, rather than trusting that a code fix alone was sufficient.
 
+- **The random-policy baseline was not reproducible.** `np.random.seed` does not seed Gymnasium's `action_space.sample()`, which has its own RNG, so the random floor changed on every run (−184.4 on one run, −161.3 on another). The action space is now seeded explicitly; the PPO agent itself was always fully seeded and reproduces exactly on a given machine.
+
+- **Two hypothesis verdicts were hard-coded rather than computed.** H3 ("same broad regime as SB3 PPO") and H6 ("best vs. final diverge") printed "Supported" whatever the numbers were. On a rerun, SB3 PPO scored 16.0 instead of 94.1, and the best-vs-final gap (11 points) turned out to be smaller than the evaluation standard error (~23). Both verdicts are now computed from the results.
+
 - **Several section-header markdown cells contained unrendered variable placeholders.** Text like `` `{CONFIG.main_run_timesteps}` `` inside a *markdown* cell is not interpolated by Jupyter (unlike an f-string in a code cell) and was rendering to readers as literal, un-evaluated template syntax instead of the actual number, quietly undermining the notebook's own stated principle that "every number in this notebook comes from actually executing the code." Fixed by converting those cells to code cells that `display(Markdown(f"..."))`, so the values are recomputed live on every run and can't drift out of sync with `CONFIG` again.
 
 ---
@@ -148,15 +152,15 @@ Not tuned to reproduce any single Stable-Baselines3 number; training, evaluation
 
 | Algorithm | Implementation | On/Off-Policy | Mean Return | Median Return | Return Std | Mean Ep. Length | Success Rate |
 |---|---|---|---|---|---|---|---|
-| Random Policy | N/A | N/A | −190.4 | −155.3 | 115.2 | 97.2 | 0.00 |
+| Random Policy | N/A | N/A | −168.8 | −132.2 | 95.3 | 89.2 | 0.00 |
 | **From-Scratch PPO** | NumPy (this notebook) | On-policy | **155.5** | **220.1** | 103.7 | 446.4 | **0.60** |
-| Stable-Baselines3 PPO | PyTorch (SB3) | On-policy | 94.1 | 147.5 | 117.7 | 696.3 | 0.20 |
-| Stable-Baselines3 A2C | PyTorch (SB3) | On-policy | −90.5 | −108.1 | 73.9 | 457.9 | 0.00 |
-| Stable-Baselines3 DQN | PyTorch (SB3) | Off-policy | −113.7 | −116.8 | 20.6 | 1000.0 | 0.00 |
+| Stable-Baselines3 PPO | PyTorch (SB3) | On-policy | 16.0 | −48.3 | 114.1 | 565.9 | 0.00 |
+| Stable-Baselines3 A2C | PyTorch (SB3) | On-policy | −41.6 | −73.4 | 94.7 | 618.9 | 0.00 |
+| Stable-Baselines3 DQN | PyTorch (SB3) | Off-policy | −113.7 | −116.8 | 20.1 | 1000.0 | 0.00 |
 
-The from-scratch agent landed in the same broad performance regime as SB3 PPO under an identical timestep budget and comparable architecture, in this run it outperformed SB3 PPO on mean/median return and success rate, which is a useful validation signal but not a general claim (SB3's defaults are not tuned for this specific environment either, and a single run per algorithm is weak evidence per H5/H6).
+In this run the from-scratch agent scored well above SB3 PPO (155.5 vs 16.0). Treat that as weak evidence: each baseline is a single run, and SB3 PPO is noisy. With the same configuration and seed, its evaluation mean was 137.2, 94.1 and 16.0 across three runs on different machines and library builds. The from-scratch agent scored above SB3 PPO in all three, but no single run fixes SB3 PPO's "regime" (SB3's defaults are not tuned for this environment either). Evidence that the implementation is correct comes from the gradient checks and unit tests, not from this comparison.
 
-**Main training run** (300,000 timesteps, deterministic evaluation): best rolling eval mean return **188.2**, final-checkpoint eval mean return **176.8**, final-checkpoint success rate **0.75**, the best checkpoint seen during training was not the final one, which is why both are reported separately rather than only the last.
+**Main training run** (300,000 timesteps, deterministic evaluation): best rolling eval mean return **188.2**, final-checkpoint eval mean return **176.8**, final-checkpoint success rate **0.75**, the best checkpoint seen during training was not the final one, which is why both are reported separately rather than only the last. With 20 evaluation episodes the standard error is about 23 points, so the 11-point gap between them is within evaluation noise.
 
 **Multi-seed evaluation** (3 seeds, 150,000 timesteps each, final deterministic eval):
 
@@ -187,12 +191,12 @@ Disabling advantage normalization and zeroing the entropy coefficient both visib
 
 | ID | Hypothesis | Verdict |
 |---|---|---|
-| H1 | PPO beats a random/untrained policy | **Supported** — random floor mean return −190.4 vs. from-scratch PPO 155.5 |
+| H1 | PPO beats a random/untrained policy | **Supported** — random floor mean return −168.8 vs. from-scratch PPO 155.5 |
 | H2 | PPO is more stable than naive (unclipped) policy gradient | **Not directly tested** — no unclipped policy-gradient baseline was implemented (see Future Work) |
-| H3 | From-scratch PPO reaches the same broad regime as SB3 PPO | **Supported** — 155.5 vs. 94.1 mean eval return, comparable architecture and budget |
-| H4 | A2C/DQN provide useful independent reference points | **Supported** — SB3 A2C −90.5, SB3 DQN −113.7, distinct from PPO's regime |
+| H3 | From-scratch PPO reaches the same broad regime as SB3 PPO | **Supported, weakly** — 155.5 vs. 16.0 in this run; SB3 PPO ranged 16.0–137.2 across three runs, so a single SB3 run is a noisy reference |
+| H4 | A2C/DQN provide useful independent reference points | **Supported** — SB3 A2C −41.6, SB3 DQN −113.7, distinct from PPO's regime |
 | H5 | Multiple seeds reveal meaningful variance | **Supported** — multi-seed means: −50.6 / 53.9 / 150.4 |
-| H6 | Reward variance/stability is informative beyond peak reward | **Supported** — best rolling eval (188.2) vs. final checkpoint (176.8) diverge |
+| H6 | Reward variance/stability is informative beyond peak reward | **Not shown in this run** — best rolling eval (188.2) vs. final checkpoint (176.8) differ by less than the evaluation standard error (~23) |
 
 **Failure analysis:** no full training collapse occurred in the main run, but training-return non-monotonicity is visible throughout the learning curve (e.g. a dip around 100k–125k steps), an expected feature of policy-gradient optimization on a moderately stochastic environment rather than a bug, a reminder not to read any single local dip or peak as a definitive signal.
 
@@ -222,7 +226,7 @@ There's no held-out label to check predictions against, so correctness has to be
 
 6. **PPO's Clipped Objective and A2C's Simpler Update Are Not Interchangeable Comparisons Without Saying So.**
 
-A2C and DQN sit under this notebook's shared evaluation protocol and budget as *reference points*, not as claims that PPO must or does dominate every on/off-policy alternative. Reporting SB3 A2C's −90.5 and SB3 DQN's −113.7 alongside PPO's numbers, rather than only reporting PPO's own result, is what makes the "same broad performance regime" validation claim (H3) actually checkable instead of asserted.
+A2C and DQN sit under this notebook's shared evaluation protocol and budget as *reference points*, not as claims that PPO must or does dominate every on/off-policy alternative. Reporting SB3 A2C's −41.6 and SB3 DQN's −113.7 alongside PPO's numbers, rather than only reporting PPO's own result, is what makes the comparison (H3) checkable instead of asserted, and rerunning it showed how noisy single baseline runs are: SB3 PPO alone moved between 16.0 and 137.2 across runs.
 
 ---
 
