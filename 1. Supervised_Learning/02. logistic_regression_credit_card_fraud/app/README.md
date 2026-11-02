@@ -24,12 +24,15 @@ All three inputs live in the sidebar.
 
 ## Run it locally
 
+From the repository root:
+
 ```bash
-cd "1. Supervised_Learning/02. logistic_regression_credit_card_fraud/app"
 python -m venv .venv && source .venv/bin/activate     # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-streamlit run app.py
+pip install -r requirements.txt                        # the app's runtime dependencies
+streamlit run streamlit_app.py
 ```
+
+(`streamlit run "1. Supervised_Learning/02. logistic_regression_credit_card_fraud/app/app.py"` works too.)
 
 The trained models and the validation/test splits are committed in `artifacts/` (about 19 MB),
 so the app starts without downloading the dataset or retraining.
@@ -63,15 +66,15 @@ pytest -q
 ## Deploy on Streamlit Community Cloud
 
 1. At [share.streamlit.io](https://share.streamlit.io), choose **Create app → Deploy a public app from GitHub**.
-2. Pick this repository and the `main` branch, and set **Main file path** to `streamlit_app.py`
-   (the file at the repository root, not `app.py` in this folder).
+2. Pick this repository and the `main` branch, and set **Main file path** to `streamlit_app.py`.
 3. Deploy.
 
-Why the root file: the path to this folder contains spaces, and Community Cloud passes the path of
-a `requirements.txt` found next to the main file to its installer unquoted, so deploying `app.py`
-directly fails with `Failed to parse: Supervised_Learning/02.`. The root `streamlit_app.py` simply
-runs this app; Cloud then installs the root `requirements.txt` (same four packages) and reads the
-root `.streamlit/config.toml` (same theme).
+The app's dependencies and theme live at the repository root (`requirements.txt`,
+`.streamlit/config.toml`), and this folder deliberately has no `requirements.txt`. The path to this
+folder contains spaces, and Community Cloud passes the path of a `requirements.txt` found next to
+the main file to its installer unquoted, which fails with `Failed to parse: Supervised_Learning/02.`.
+With no dependency file here, Cloud falls back to the root one, so either main file path
+(`streamlit_app.py` or this folder's `app.py`) deploys.
 
 ## Exactness
 
@@ -99,6 +102,5 @@ app/
 ├── artifacts/             # model.npz, eval_data.npz, meta.json
 ├── tests/
 ├── assets/screenshot.png
-├── requirements.txt
-└── requirements-dev.txt
+└── requirements-dev.txt   # tests and artifact rebuild (runtime deps: root requirements.txt)
 ```
